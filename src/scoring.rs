@@ -53,7 +53,7 @@ pub struct ScoringPlugin;
 
 impl Plugin for ScoringPlugin {
     fn build(&self, app: &mut App) {
-        app.observe(Self::run_scoring_post_order_dfs);
+        app.add_observer(Self::run_scoring_post_order_dfs);
 
         app.register_type::<Score>()
             .register_type::<AllOrNothing>()
@@ -347,7 +347,7 @@ impl RangeBounds<Score> for ScoreRange {
 ///
 /// # let mut app = App::new();
 /// # app.add_plugins(ObservedUtilityPlugins::RealTime);
-/// app.observe(score_ancestor::<Thirst, Thirsty>);
+/// app.add_observer(score_ancestor::<Thirst, Thirsty>);
 ///
 /// # let mut world = app.world_mut();
 /// # let mut commands = world.commands();
@@ -387,9 +387,7 @@ pub fn score_ancestor<T: Component, ScoreMarker: Component>(
 mod tests {
     use approx::assert_relative_eq;
     use bevy::{
-        app::App,
-        ecs::observer::ObserverState,
-        prelude::{BuildWorldChildren, With, World},
+        app::App, ecs::observer::ObserverState, hierarchy::{BuildChildren, ChildBuild}, prelude::{With, World}
     };
 
     use crate::{

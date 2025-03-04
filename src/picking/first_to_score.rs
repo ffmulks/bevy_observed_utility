@@ -28,8 +28,8 @@ use crate::{
 ///
 /// // We need the ComponentIds to initialize the Picker.
 /// // It's recommended to use a resource to store these.
-/// let my_action = world.init_component::<MyAction>();
-/// let idle_action = world.init_component::<IdleAction>();
+/// let my_action = world.register_component::<MyAction>();
+/// let idle_action = world.register_component::<IdleAction>();
 ///
 /// # let mut commands = world.commands();
 /// // Spawn the scorer entity that will be picked by the actor.

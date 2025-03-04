@@ -37,7 +37,7 @@ fn score(c: &mut Criterion) {
 
 fn bench_scoring(b: &mut Bencher, scoring_depth: usize, num_trees: usize) {
     let mut world = World::new();
-    world.observe(ScoringPlugin::run_scoring_post_order_dfs);
+    world.add_observer(ScoringPlugin::run_scoring_post_order_dfs);
     for _ in 0..num_trees {
         build_deep_tree(world.commands(), scoring_depth);
     }

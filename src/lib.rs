@@ -62,7 +62,7 @@
 //! /// Still just a normal system that runs at a fixed rate.
 //! fn get_thirsty_over_time(time: Res<Time<Fixed>>, mut actors: Query<&mut Thirst>) {
 //!    for mut thirst in actors.iter_mut() {
-//!        thirst.value = (thirst.value + thirst.per_second * time.delta_seconds()).min(100.);
+//!        thirst.value = (thirst.value + thirst.per_second * time.delta_secs()).min(100.);
 //!    }
 //! }
 //! app.add_systems(FixedUpdate, get_thirsty_over_time);
@@ -76,7 +76,7 @@
 //! // It listens for the OnScore event and scores the entity using two generic parameters:
 //! // - #1: The component to read from the closest parent/ancestor entity.
 //! // - #2: The score entity with this marker component.
-//! app.observe(score_ancestor::<Thirst, Thirsty>);
+//! app.add_observer(score_ancestor::<Thirst, Thirsty>);
 //!
 //! /// Next we need an action to perform when the thirst is high enough.
 //! /// This one also belongs to the actor, and is just a normal component.
@@ -115,8 +115,8 @@
 //! impl FromWorld for ActionIds {
 //!     fn from_world(world: &mut World) -> Self {
 //!         Self {
-//!             idle: world.init_component::<Idle>(),
-//!             drinking: world.init_component::<Drinking>(),
+//!             idle: world.register_component::<Idle>(),
+//!             drinking: world.register_component::<Drinking>(),
 //!         }
 //!     }
 //! }
@@ -127,7 +127,7 @@
 //! // The library provides a builtin function to handle the common case where
 //! // an action is initiated and its component should be inserted onto the actor.
 //! // Inserting this component will allow the actor to be targeted in the following system.
-//! app.observe(on_action_initiated_insert_default::<Drinking>);
+//! app.add_observer(on_action_initiated_insert_default::<Drinking>);
 //!
 //! /// Now we'll update all actors that are drinking.
 //! /// This is a normal system that runs at a fixed rate.
@@ -139,7 +139,7 @@
 //! ) {
 //!     for (actor, mut thirst, drinking) in actors.iter_mut() {
 //!         // Quench the thirst a bit.
-//!         thirst.value = (thirst.value - drinking.per_second * time.delta_seconds()).max(0.);
+//!         thirst.value = (thirst.value - drinking.per_second * time.delta_secs()).max(0.);
 //!         // If the thirst is low enough, finish drinking.
 //!         if thirst.value <= drinking.until {
 //!             /// We'll need that ActionIds resource we created earlier to identify the action.
@@ -155,7 +155,7 @@
 //!
 //! // Similar to on_action_initiated_insert_default, the library also provides a function
 //! // to automatically remove the action's component from the actor when it ends.
-//! app.observe(on_action_ended_remove::<Drinking>);
+//! app.add_observer(on_action_ended_remove::<Drinking>);
 //!
 //! // Now onto the real magic: spawning our entities!
 //!

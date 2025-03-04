@@ -28,8 +28,8 @@ pub struct ActionPlugin;
 
 impl Plugin for ActionPlugin {
     fn build(&self, app: &mut App) {
-        app.observe(Self::on_request_cancel_and_initiate)
-            .observe(Self::on_ended_request_again);
+        app.add_observer(Self::on_request_cancel_and_initiate)
+            .add_observer(Self::on_ended_request_again);
 
         app.register_type::<CurrentAction>();
 

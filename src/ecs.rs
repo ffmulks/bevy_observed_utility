@@ -22,13 +22,13 @@ pub struct TargetedAction(pub Entity, pub ComponentId);
 
 impl TriggerTargets for TargetedAction {
     #[inline]
-    fn components(&self) -> impl ExactSizeIterator<Item = ComponentId> {
-        std::iter::once(self.1)
+    fn components(&self) ->  &[ComponentId] {
+        std::slice::from_ref(&self.1)
     }
 
     #[inline]
-    fn entities(&self) -> impl ExactSizeIterator<Item = Entity> {
-        std::iter::once(self.0)
+    fn entities(&self) -> &[Entity] {
+        std::slice::from_ref(&self.0)
     }
 }
 
@@ -60,7 +60,7 @@ pub struct AncestorQuery<'w, 's, T: ReferenceType> {
 
 impl<'w, 's, T: ReferenceType> AncestorQuery<'w, 's, T> {
     /// Crawls up the hierarchy to find the closest ancestor entity with the component `T`.
-    fn find(&mut self, start: Entity) -> Result<Entity, QueryEntityError> {
+    fn find(&mut self, start: Entity) -> Result<Entity, QueryEntityError<'w>> {
         // Crawl up the hierarchy
         let mut current = start;
         loop {
@@ -106,7 +106,8 @@ impl<'w, 's, T: Component> AncestorQuery<'w, 's, &'static T> {
             entry.remove();
         }
 
-        self.find(start).and_then(|found| self.fetch.get(found))
+        let found = self.find(start)?;
+        self.fetch.get(found)
     }
 }
 
@@ -128,7 +129,8 @@ impl<'w, 's, T: Component> AncestorQuery<'w, 's, &'static mut T> {
             entry.remove();
         }
 
-        self.find(start).and_then(|found| self.fetch.get_mut(found))
+        let found = self.find(start)?;
+        self.fetch.get_mut(found)
     }
 }
 
@@ -183,10 +185,10 @@ impl<'w, 's, R: Resource + Default> OnceCommands<'w, 's, R> {
     /// Adds the specified [`Observer`] system if and only if the [`Resource`] `R` has not been inserted into the [`World`] yet.
     /// After running the command, the resource is inserted into the world.
     pub fn observe<E: Event, B: Bundle, M>(mut self, observer: impl IntoObserverSystem<E, B, M>) {
-        self.commands.add(Once::<R, _> {
+        self.commands.queue(Once::<R, _> {
             _type: PhantomData,
             command: |world: &mut World| {
-                world.observe(observer);
+                world.add_observer(observer);
             },
         });
     }
