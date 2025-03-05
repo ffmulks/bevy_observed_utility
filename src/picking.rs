@@ -34,7 +34,7 @@ pub struct PickingPlugin;
 
 impl Plugin for PickingPlugin {
     fn build(&self, app: &mut App) {
-        app.observe(Self::run_picking);
+        app.add_observer(Self::run_picking);
 
         app.register_type::<Picker>()
             .register_type::<FirstToScore>()
@@ -141,8 +141,8 @@ mod tests {
         app.add_plugins(crate::ObservedUtilityPlugins::RealTime);
         let world = app.world_mut();
 
-        let my_action = world.init_component::<MyAction>();
-        let idle_action = world.init_component::<IdleAction>();
+        let my_action = world.register_component::<MyAction>();
+        let idle_action = world.register_component::<IdleAction>();
 
         let mut commands = world.commands();
 
@@ -165,8 +165,8 @@ mod tests {
         app.add_plugins(crate::ObservedUtilityPlugins::RealTime);
         let world = app.world_mut();
 
-        let my_action = world.init_component::<MyAction>();
-        let idle_action = world.init_component::<IdleAction>();
+        let my_action = world.register_component::<MyAction>();
+        let idle_action = world.register_component::<IdleAction>();
 
         let mut commands = world.commands();
 

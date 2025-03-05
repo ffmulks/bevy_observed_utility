@@ -18,7 +18,7 @@ impl From<&Thirst> for Score {
 
 pub fn get_thirsty_over_time(time: Res<Time<Fixed>>, mut thirsts: Query<&mut Thirst>) {
     for mut thirst in thirsts.iter_mut() {
-        thirst.value = (thirst.value + thirst.per_second * time.delta_seconds()).min(100.);
+        thirst.value = (thirst.value + thirst.per_second * time.delta_secs()).min(100.);
         info!("Thirst: {}", thirst.value);
     }
 }
@@ -69,7 +69,7 @@ pub fn quench_thirst(
     mut drinking: Query<(Entity, &mut Thirst, &Drinking)>,
 ) {
     for (actor, mut thirst, drink) in drinking.iter_mut() {
-        thirst.value = (thirst.value - drink.per_second * time.delta_seconds()).max(0.);
+        thirst.value = (thirst.value - drink.per_second * time.delta_secs()).max(0.);
         info!("DRINKING!");
         if thirst.value <= drink.until {
             commands.trigger_targets(
@@ -96,8 +96,8 @@ pub struct ActionIds {
 impl FromWorld for ActionIds {
     fn from_world(world: &mut World) -> Self {
         Self {
-            drink: world.init_component::<Drinking>(),
-            idle: world.init_component::<Idle>(),
+            drink: world.register_component::<Drinking>(),
+            idle: world.register_component::<Idle>(),
         }
     }
 }
@@ -114,8 +114,8 @@ fn main() {
         .init_resource::<Drinking>()
         .add_systems(Startup, spawn_entities)
         .add_systems(FixedUpdate, (get_thirsty_over_time, quench_thirst).chain())
-        .observe(score_ancestor::<Thirst, Thirsty>)
-        .observe(on_action_initiated_insert_from_resource::<Drinking>)
-        .observe(on_action_ended_remove::<Drinking>)
+        .add_observer(score_ancestor::<Thirst, Thirsty>)
+        .add_observer(on_action_initiated_insert_from_resource::<Drinking>)
+        .add_observer(on_action_ended_remove::<Drinking>)
         .run();
 }

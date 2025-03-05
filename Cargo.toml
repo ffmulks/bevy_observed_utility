@@ -15,7 +15,7 @@ readme = "README.md"
 default = []
 
 [dependencies]
-bevy = { version = "0.14", default-features = false }
+bevy = { version = "0.15", default-features = false }
 rand = { version = "0.8", optional = true }
 
 [dev-dependencies]
