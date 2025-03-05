@@ -22,7 +22,7 @@ pub struct TargetedAction(pub Entity, pub ComponentId);
 
 impl TriggerTargets for TargetedAction {
     #[inline]
-    fn components(&self) ->  &[ComponentId] {
+    fn components(&self) -> &[ComponentId] {
         std::slice::from_ref(&self.1)
     }
 
