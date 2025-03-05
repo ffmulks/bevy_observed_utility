@@ -16,12 +16,12 @@ default = []
 
 [dependencies]
 bevy = { version = "0.15", default-features = false }
-rand = { version = "0.8", optional = true }
+rand = { version = "0.9", optional = true }
 
 [dev-dependencies]
 approx = "0.5.1"
 criterion = "0.5.1"
-rand = { version = "0.8", features = ["std_rng"]}
+rand = { version = "0.9", features = ["std_rng"]}
 
 [[bench]]
 name = "score"
