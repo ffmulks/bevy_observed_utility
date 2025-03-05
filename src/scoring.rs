@@ -387,7 +387,10 @@ pub fn score_ancestor<T: Component, ScoreMarker: Component>(
 mod tests {
     use approx::assert_relative_eq;
     use bevy::{
-        app::App, ecs::observer::ObserverState, hierarchy::{BuildChildren, ChildBuild}, prelude::{With, World}
+        app::App,
+        ecs::observer::ObserverState,
+        hierarchy::{BuildChildren, ChildBuild},
+        prelude::{With, World},
     };
 
     use crate::{
