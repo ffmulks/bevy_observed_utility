@@ -58,7 +58,7 @@ pub struct AncestorQuery<'w, 's, T: ReferenceType> {
     cache: Local<'s, EntityHashMap<Entity>>,
 }
 
-impl<'w, 's, T: ReferenceType> AncestorQuery<'w, 's, T> {
+impl<'w, T: ReferenceType> AncestorQuery<'w, '_, T> {
     /// Crawls up the hierarchy to find the closest ancestor entity with the component `T`.
     fn find(&mut self, start: Entity) -> Result<Entity, QueryEntityError<'w>> {
         // Crawl up the hierarchy
@@ -88,7 +88,7 @@ impl<'w, 's, T: ReferenceType> AncestorQuery<'w, 's, T> {
     }
 }
 
-impl<'w, 's, T: Component> AncestorQuery<'w, 's, &'static T> {
+impl<T: Component> AncestorQuery<'_, '_, &'static T> {
     /// Returns a readonly reference to the [`Component`] `T` on the closest ancestor entity, if any.
     ///
     /// # Errors
@@ -111,7 +111,7 @@ impl<'w, 's, T: Component> AncestorQuery<'w, 's, &'static T> {
     }
 }
 
-impl<'w, 's, T: Component> AncestorQuery<'w, 's, &'static mut T> {
+impl<T: Component> AncestorQuery<'_, '_, &'static mut T> {
     /// Returns a mutable reference to the [`Component`] `T` on the closest ancestor entity, if any.
     ///
     /// # Errors
