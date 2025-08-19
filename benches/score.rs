@@ -1,4 +1,4 @@
-use bevy::prelude::{BuildChildren, Commands, World};
+use bevy::prelude::{ChildOf, Commands, World};
 use bevy_observed_utility::{
     event::RunScoring,
     scoring::{AllOrNothing, FixedScore, Score, ScoringPlugin},
@@ -18,10 +18,10 @@ fn score(c: &mut Criterion) {
     c.bench_function("score/deep-3/many-100", |b| {
         bench_scoring(b, 3, 100);
     });
-    c.bench_function("score/deep-3/many-100", |b| {
+    c.bench_function("score/deep-10/many-100", |b| {
         bench_scoring(b, 10, 100);
     });
-    c.bench_function("score/deep-3/many-100", |b| {
+    c.bench_function("score/deep-25/many-100", |b| {
         bench_scoring(b, 25, 100);
     });
     c.bench_function("score/deep-3/many-10000", |b| {
@@ -54,13 +54,13 @@ fn build_deep_tree(mut commands: Commands, depth: usize) {
     for _ in 0..depth - 2 {
         last = commands
             .spawn((AllOrNothing::new(0.5), Score::default()))
-            .set_parent(last)
+            .insert(ChildOf(last))
             .id();
     }
 
     commands
         .spawn((FixedScore::new(0.5), Score::default()))
-        .set_parent(last);
+        .insert(ChildOf(last));
 }
 
 criterion_group!(benches, score);
