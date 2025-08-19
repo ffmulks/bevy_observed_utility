@@ -133,6 +133,11 @@ impl LinearEvaluator {
         }
     }
 
+    /// A linear evaluator that inverts values in the 0.0..=1.0 range.
+    pub fn not() -> Self {
+        Self::from_range(1.0, 0.0)
+    }
+
     /// Creates a linear evaluator with the given range.
     #[must_use]
     pub fn from_range(min: f32, max: f32) -> Self {
