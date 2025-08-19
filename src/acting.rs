@@ -47,7 +47,7 @@ impl ActionPlugin {
         mut commands: Commands,
         mut actors: Query<(&Picker, Option<&CurrentAction>)>,
     ) {
-        let actor = trigger.entity();
+        let actor = trigger.target();
         let requested = trigger.event().action;
         if let Ok((picker, current_action)) = actors.get_mut(actor) {
             let current_action = current_action.map(|ca| ca.0);
@@ -78,7 +78,7 @@ impl ActionPlugin {
 
     /// [`Observer`] that listens for [`OnActionEnded`] events and triggers a new [`RequestAction`] event for the target actor entity.
     pub fn on_ended_request_again(trigger: Trigger<OnActionEnded>, mut commands: Commands) {
-        let actor = trigger.entity();
+        let actor = trigger.target();
 
         match trigger.event().reason {
             ActionEndReason::Completed => {
@@ -112,7 +112,7 @@ pub fn on_action_initiated_insert_default<Action: Component + Default>(
     trigger: Trigger<OnActionInitiated, Action>,
     mut commands: Commands,
 ) {
-    let actor = trigger.entity();
+    let actor = trigger.target();
     commands.entity(actor).insert(Action::default());
 }
 
@@ -126,13 +126,13 @@ pub fn on_action_initiated_insert_from_resource<Action: Component + Resource + C
     mut commands: Commands,
     resource: Res<Action>,
 ) {
-    let actor = trigger.entity();
+    let actor = trigger.target();
     commands.entity(actor).insert(resource.clone());
 }
 
 /// [`Observer`] that listens for [`OnActionEnded`] events targeting
 /// the specified `Action` [`Component`] and removes the component from the actor entity.
 pub fn on_action_ended_remove<Action: Component>(trigger: Trigger<OnActionEnded, Action>, mut commands: Commands) {
-    let actor = trigger.entity();
+    let actor = trigger.target();
     commands.entity(actor).remove::<Action>();
 }

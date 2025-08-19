@@ -52,7 +52,7 @@ impl FixedScore {
 
     /// [`Observer`] for [`FixedScore`] [`Score`] entities that scores itself.
     fn observer(trigger: Trigger<OnScore>, mut target: Query<(&mut Score, &FixedScore)>) {
-        let Ok((mut actor_score, settings)) = target.get_mut(trigger.entity()) else {
+        let Ok((mut actor_score, settings)) = target.get_mut(trigger.target()) else {
             // The entity is not scoring for fixed.
             return;
         };
@@ -63,9 +63,10 @@ impl FixedScore {
 
 impl Component for FixedScore {
     const STORAGE_TYPE: StorageType = StorageType::Table;
+    type Mutability = bevy::ecs::component::Immutable;
 
     fn register_component_hooks(hooks: &mut ComponentHooks) {
-        hooks.on_add(|mut world, _entity, _component| {
+        hooks.on_add(|mut world, _entity| {
             #[derive(Resource, Default)]
             struct FixedScoreObserverSpawned;
 

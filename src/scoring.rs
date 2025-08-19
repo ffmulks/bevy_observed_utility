@@ -87,7 +87,7 @@ impl ScoringPlugin {
     pub fn run_scoring_post_order_dfs(
         trigger: Trigger<RunScoring>,
         mut commands: Commands,
-        scoreable_roots: Query<(Entity, Option<&Parent>), With<Score>>,
+        scoreable_roots: Query<(Entity, Option<&ChildOf>), With<Score>>,
         root_parents: Query<(), Without<Score>>,
         mut dfs: DFSPostTraversal<With<Score>>,
     ) {
@@ -107,7 +107,7 @@ impl ScoringPlugin {
             // Find all score entities that have no parents at all, or whose parents are not score entities
             let roots = scoreable_roots.iter().filter_map(|(entity, parent)| {
                 if let Some(parent) = parent {
-                    if root_parents.contains(**parent) {
+                    if root_parents.contains(parent.parent()) {
                         Some(entity)
                     } else {
                         None
@@ -370,7 +370,7 @@ pub fn score_ancestor<T: Component, ScoreMarker: Component>(
 ) where
     for<'a> &'a T: Into<Score>,
 {
-    let scorer = trigger.entity();
+    let scorer = trigger.target();
     let Ok(mut score) = scores.get_mut(scorer) else {
         return;
     };
@@ -389,7 +389,6 @@ mod tests {
     use bevy::{
         app::App,
         ecs::observer::ObserverState,
-        hierarchy::{BuildChildren, ChildBuild},
         prelude::{With, World},
     };
 

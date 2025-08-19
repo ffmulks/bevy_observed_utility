@@ -70,7 +70,7 @@ impl RandomScore {
     }
 
     fn observer(trigger: Trigger<OnScore>, mut target: Query<(&mut Score, &mut RandomScore)>) {
-        let Ok((mut actor_score, mut settings)) = target.get_mut(trigger.entity()) else {
+        let Ok((mut actor_score, mut settings)) = target.get_mut(trigger.target()) else {
             // The entity is not scoring for random.
             return;
         };
@@ -85,9 +85,10 @@ impl RandomScore {
 
 impl Component for RandomScore {
     const STORAGE_TYPE: StorageType = StorageType::Table;
+    type Mutability = bevy::ecs::component::Immutable;
 
     fn register_component_hooks(hooks: &mut ComponentHooks) {
-        hooks.on_add(|mut world, _entity, _component| {
+        hooks.on_add(|mut world, _entity| {
             #[derive(Resource, Default)]
             struct RandomScoreObserverSpawned;
 

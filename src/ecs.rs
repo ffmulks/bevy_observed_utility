@@ -2,6 +2,8 @@
 
 use std::{collections::VecDeque, iter::FusedIterator, marker::PhantomData};
 
+use hashbrown::hash_map::Entry;
+
 use bevy::{
     ecs::{
         component::ComponentId,
@@ -9,10 +11,8 @@ use bevy::{
         observer::TriggerTargets,
         query::{QueryData, QueryEntityError, QueryFilter, ReadOnlyQueryData},
         system::{IntoObserverSystem, SystemParam},
-        world::Command,
     },
     prelude::*,
-    utils::Entry,
 };
 
 /// A [`TriggerTargets`] used by the action [`Event`]s to trigger an action [`ComponentId`] for a given entity.
@@ -22,13 +22,13 @@ pub struct TargetedAction(pub Entity, pub ComponentId);
 
 impl TriggerTargets for TargetedAction {
     #[inline]
-    fn components(&self) -> &[ComponentId] {
-        std::slice::from_ref(&self.1)
+    fn components(&self) -> impl Iterator<Item = ComponentId> + Clone + '_ {
+        std::iter::once(self.1)
     }
 
     #[inline]
-    fn entities(&self) -> &[Entity] {
-        std::slice::from_ref(&self.0)
+    fn entities(&self) -> impl Iterator<Item = Entity> + Clone + '_ {
+        std::iter::once(self.0)
     }
 }
 
@@ -39,10 +39,10 @@ pub trait TriggerGetEntity {
     fn get_entity(&self) -> Option<Entity>;
 }
 
-impl<E, B: Bundle> TriggerGetEntity for Trigger<'_, E, B> {
+impl<E> TriggerGetEntity for Trigger<'_, E> {
     #[inline]
     fn get_entity(&self) -> Option<Entity> {
-        Some(self.entity()).filter(|e| e != &Entity::PLACEHOLDER)
+        Some(self.target()).filter(|e| e != &Entity::PLACEHOLDER)
     }
 }
 
@@ -51,7 +51,7 @@ impl<E, B: Bundle> TriggerGetEntity for Trigger<'_, E, B> {
 #[derive(SystemParam)]
 pub struct AncestorQuery<'w, 's, T: ReferenceType> {
     /// The query to find the component, crawling up the hierarchy if necessary.
-    check: Query<'w, 's, (<T as ReferenceType>::Has, Option<&'static Parent>)>,
+    check: Query<'w, 's, (<T as ReferenceType>::Has, Option<&'static ChildOf>)>,
     /// The query to grab the component. This query wouldn't be necessary if rust wouldn't complain!
     fetch: Query<'w, 's, T>,
     /// Caches a given entity's closest ancestor entity with the component T.
@@ -60,7 +60,7 @@ pub struct AncestorQuery<'w, 's, T: ReferenceType> {
 
 impl<'w, T: ReferenceType> AncestorQuery<'w, '_, T> {
     /// Crawls up the hierarchy to find the closest ancestor entity with the component `T`.
-    fn find(&mut self, start: Entity) -> Result<Entity, QueryEntityError<'w>> {
+    fn find(&mut self, start: Entity) -> Result<Entity, QueryEntityError> {
         // Crawl up the hierarchy
         let mut current = start;
         loop {
@@ -72,11 +72,17 @@ impl<'w, T: ReferenceType> AncestorQuery<'w, '_, T> {
                 }
                 Ok((false, Some(parent))) => {
                     // Continue searching up the hierarchy
-                    current = **parent;
+                    current = parent.parent();
                 }
-                Ok((false, None)) | Err(_) => {
-                    // No parent with the component found
-                    return Err(QueryEntityError::NoSuchEntity(current));
+                Ok((false, None)) => {
+                    // No parent found
+                    return Err(QueryEntityError::QueryDoesNotMatch(
+                        current,
+                        bevy::ecs::archetype::ArchetypeId::EMPTY,
+                    ));
+                }
+                Err(e) => {
+                    return Err(e);
                 }
             }
         }
@@ -111,7 +117,7 @@ impl<T: Component> AncestorQuery<'_, '_, &'static T> {
     }
 }
 
-impl<T: Component> AncestorQuery<'_, '_, &'static mut T> {
+impl<T: Component<Mutability = bevy::ecs::component::Mutable>> AncestorQuery<'_, '_, &'static mut T> {
     /// Returns a mutable reference to the [`Component`] `T` on the closest ancestor entity, if any.
     ///
     /// # Errors
@@ -144,25 +150,27 @@ impl<T: Component> ReferenceType for &'static T {
     type Has = Has<T>;
 }
 
-impl<T: Component> ReferenceType for &'static mut T {
+impl<T: Component<Mutability = bevy::ecs::component::Mutable>> ReferenceType for &'static mut T {
     type Has = Has<T>;
 }
 
 /// [`Command`] that runs a given command only if the [`Resource`] `R` has not been inserted into the [`World`] yet.
 /// After running the command, the resource is inserted into the world.
-pub struct Once<R: Resource + Default, C: Command> {
+pub struct Once<R: Resource + Default, C: FnOnce(&mut World) + Send + 'static> {
     _type: PhantomData<R>,
-    command: C,
+    command: Option<C>,
 }
 
-impl<R: Resource + Default, C: Command> Command for Once<R, C> {
-    fn apply(self, world: &mut World) {
+impl<R: Resource + Default, C: FnOnce(&mut World) + Send + 'static> Command for Once<R, C> {
+    fn apply(mut self, world: &mut World) {
         if world.contains_resource::<R>() {
             // We've already run the command.
             return;
         }
         world.insert_resource(R::default());
-        self.command.apply(world);
+        if let Some(command) = self.command.take() {
+            command(world);
+        }
     }
 }
 
@@ -184,12 +192,12 @@ impl<'w, 's, R: Resource + Default> OnceCommands<'w, 's, R> {
 
     /// Adds the specified [`Observer`] system if and only if the [`Resource`] `R` has not been inserted into the [`World`] yet.
     /// After running the command, the resource is inserted into the world.
-    pub fn observe<E: Event, B: Bundle, M>(mut self, observer: impl IntoObserverSystem<E, B, M>) {
+    pub fn observe<E: Event, B: Bundle, M>(mut self, observer: impl IntoObserverSystem<E, B, M> + Send + 'static) {
         self.commands.queue(Once::<R, _> {
             _type: PhantomData,
-            command: |world: &mut World| {
+            command: Some(move |world: &mut World| {
                 world.add_observer(observer);
-            },
+            }),
         });
     }
 }

@@ -3,7 +3,7 @@ use bevy_observed_utility::{
     event::RunScoring,
     scoring::{AllOrNothing, FixedScore, Score, ScoringPlugin},
 };
-use criterion::{criterion_group, criterion_main, Bencher, Criterion};
+use criterion::{Bencher, Criterion, criterion_group, criterion_main};
 
 fn score(c: &mut Criterion) {
     c.bench_function("score/deep-3", |b| {

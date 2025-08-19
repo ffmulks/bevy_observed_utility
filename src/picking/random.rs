@@ -2,7 +2,7 @@ use bevy::{
     ecs::component::{ComponentHooks, StorageType},
     prelude::*,
 };
-use rand::{seq::IteratorRandom, RngCore};
+use rand::{RngCore, seq::IteratorRandom};
 
 use crate::{
     ecs::{CommandsExt, TriggerGetEntity},
@@ -109,6 +109,7 @@ impl<R: RngCore + Send + Sync + 'static> From<R> for PickRandom {
 
 impl Component for PickRandom {
     const STORAGE_TYPE: StorageType = StorageType::Table;
+    type Mutability = bevy::ecs::component::Immutable;
 
     fn register_component_hooks(hooks: &mut ComponentHooks) {
         hooks.on_add(|mut world, _entity, _component| {

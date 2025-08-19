@@ -104,9 +104,10 @@ impl Highest {
 
 impl Component for Highest {
     const STORAGE_TYPE: StorageType = StorageType::Table;
+    type Mutability = bevy::ecs::component::Immutable;
 
     fn register_component_hooks(hooks: &mut ComponentHooks) {
-        hooks.on_add(|mut world, _entity, _component| {
+        hooks.on_add(|mut world, _entity| {
             #[derive(Resource, Default)]
             struct HighestObserverSpawned;
 

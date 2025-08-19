@@ -69,7 +69,7 @@ impl Product {
 
     /// [`Observer`] for [`Product`] [`Score`] entities that scores based on all child [`Score`] entities.
     fn observer(trigger: Trigger<OnScore>, target: Query<(&Children, &Product)>, mut scores: Query<&mut Score>) {
-        let Ok((children, settings)) = target.get(trigger.entity()) else {
+        let Ok((children, settings)) = target.get(trigger.target()) else {
             // The entity is not scoring for product.
             return;
         };
@@ -92,7 +92,7 @@ impl Product {
             product = 0.;
         }
 
-        let Ok(mut actor_score) = scores.get_mut(trigger.entity()) else {
+        let Ok(mut actor_score) = scores.get_mut(trigger.target()) else {
             // The entity is not scoring.
             return;
         };
@@ -103,9 +103,10 @@ impl Product {
 
 impl Component for Product {
     const STORAGE_TYPE: StorageType = StorageType::Table;
+    type Mutability = bevy::ecs::component::Immutable;
 
     fn register_component_hooks(hooks: &mut ComponentHooks) {
-        hooks.on_add(|mut world, _entity, _component| {
+        hooks.on_add(|mut world, _entity| {
             #[derive(Resource, Default)]
             struct ProductObserverSpawned;
 

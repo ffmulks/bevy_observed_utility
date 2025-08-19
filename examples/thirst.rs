@@ -1,4 +1,4 @@
-use bevy::{ecs::component::ComponentId, log::LogPlugin, prelude::*};
+use bevy::{ecs::component::ComponentId, prelude::*};
 use bevy_observed_utility::prelude::*;
 
 #[derive(Component)]
@@ -19,7 +19,7 @@ impl From<&Thirst> for Score {
 pub fn get_thirsty_over_time(time: Res<Time<Fixed>>, mut thirsts: Query<&mut Thirst>) {
     for mut thirst in thirsts.iter_mut() {
         thirst.value = (thirst.value + thirst.per_second * time.delta_secs()).min(100.);
-        info!("Thirst: {}", thirst.value);
+        println!("Thirst: {}", thirst.value);
     }
 }
 
@@ -70,7 +70,7 @@ pub fn quench_thirst(
 ) {
     for (actor, mut thirst, drink) in drinking.iter_mut() {
         thirst.value = (thirst.value - drink.per_second * time.delta_secs()).max(0.);
-        info!("DRINKING!");
+        println!("DRINKING!");
         if thirst.value <= drink.until {
             commands.trigger_targets(
                 OnActionEnded {
@@ -105,10 +105,6 @@ impl FromWorld for ActionIds {
 fn main() {
     App::new()
         .add_plugins(MinimalPlugins)
-        .add_plugins(LogPlugin {
-            filter: "thirst=debug".to_string(),
-            ..default()
-        })
         .add_plugins(ObservedUtilityPlugins::RealTime)
         .init_resource::<ActionIds>()
         .init_resource::<Drinking>()

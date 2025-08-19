@@ -232,19 +232,19 @@ pub mod scoring;
 pub mod prelude {
     //! Re-exports important traits and types.
     pub use crate::{
+        ObservedUtilityPlugins,
         acting::{
-            on_action_ended_remove, on_action_initiated_insert_default, on_action_initiated_insert_from_resource,
-            CurrentAction,
+            CurrentAction, on_action_ended_remove, on_action_initiated_insert_default,
+            on_action_initiated_insert_from_resource,
         },
         ecs::{AncestorQuery, TargetedAction},
         event::{ActionEndReason, OnActionEnded, OnActionInitiated, OnPick, OnPicked, OnScore, RunPicking, RunScoring},
         picking::{FirstToScore, Highest, Picker},
         scoring::{
-            score_ancestor, AllOrNothing, Evaluated, Evaluator, FixedScore, LinearEvaluator, Measure, Measured,
-            PowerEvaluator, Product, Score, SigmoidEvaluator, Sum, Weighted, WeightedMax, WeightedProduct, WeightedRMS,
-            WeightedSum, Winning,
+            AllOrNothing, Evaluated, Evaluator, FixedScore, LinearEvaluator, Measure, Measured, PowerEvaluator,
+            Product, Score, SigmoidEvaluator, Sum, Weighted, WeightedMax, WeightedProduct, WeightedRMS, WeightedSum,
+            Winning, score_ancestor,
         },
-        ObservedUtilityPlugins,
     };
 
     #[cfg(feature = "rand")]

@@ -58,7 +58,7 @@ impl Sum {
 
     /// [`Observer`] for [`Sum`] [`Score`] entities that scores based on all child [`Score`] entities.
     fn observer(trigger: Trigger<OnScore>, target: Query<(&Children, &Sum)>, mut scores: Query<&mut Score>) {
-        let Ok((children, settings)) = target.get(trigger.entity()) else {
+        let Ok((children, settings)) = target.get(trigger.target()) else {
             // The entity is not scoring for sum.
             return;
         };
@@ -73,7 +73,7 @@ impl Sum {
             sum = 0.;
         }
 
-        let Ok(mut actor_score) = scores.get_mut(trigger.entity()) else {
+        let Ok(mut actor_score) = scores.get_mut(trigger.target()) else {
             // The entity is not scoring.
             return;
         };
@@ -84,9 +84,10 @@ impl Sum {
 
 impl Component for Sum {
     const STORAGE_TYPE: StorageType = StorageType::Table;
+    type Mutability = bevy::ecs::component::Immutable;
 
     fn register_component_hooks(hooks: &mut ComponentHooks) {
-        hooks.on_add(|mut world, _entity, _component| {
+        hooks.on_add(|mut world, _entity| {
             #[derive(Resource, Default)]
             struct SumObserverSpawned;
 

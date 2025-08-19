@@ -70,7 +70,7 @@ impl Evaluated {
 
     /// [`Observer`] for [`Evaluated`] [`Score`] entities that scores a single child [`Score`] entity.
     fn observer(trigger: Trigger<OnScore>, target: Query<(&Children, &Evaluated)>, mut scores: Query<&mut Score>) {
-        let Ok((children, settings)) = target.get(trigger.entity()) else {
+        let Ok((children, settings)) = target.get(trigger.target()) else {
             // The entity is not scoring for evaluated.
             return;
         };
@@ -81,7 +81,7 @@ impl Evaluated {
             };
             let value = settings.evaluate(child_score.get());
 
-            let Ok(mut target_score) = scores.get_mut(trigger.entity()) else {
+            let Ok(mut target_score) = scores.get_mut(trigger.target()) else {
                 return;
             };
             target_score.set(value);
@@ -91,9 +91,10 @@ impl Evaluated {
 
 impl Component for Evaluated {
     const STORAGE_TYPE: StorageType = StorageType::Table;
+    type Mutability = bevy::ecs::component::Immutable;
 
     fn register_component_hooks(hooks: &mut ComponentHooks) {
-        hooks.on_add(|mut world, _entity, _component| {
+        hooks.on_add(|mut world, _entity| {
             #[derive(Resource, Default)]
             struct EvaluatedObserverSpawned;
 
