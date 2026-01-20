@@ -23,10 +23,7 @@ pub use highest::*;
 #[cfg(feature = "rand")]
 pub use random::*;
 
-use crate::{
-    ecs::TriggerGetEntity,
-    event::{OnPick, OnPicked, RunPicking},
-};
+use crate::event::{OnPick, OnPicked, RunPicking};
 
 /// [`Plugin`] for picking actions based on the scores of child entities.
 #[derive(Default)]
@@ -40,8 +37,7 @@ impl Plugin for PickingPlugin {
             .register_type::<FirstToScore>()
             .register_type::<Highest>();
 
-        #[cfg(feature = "rand")]
-        app.register_type::<Random>();
+        // Note: PickRandom cannot be reflected due to the boxed RngCore trait object
 
         app.register_type::<RunPicking>()
             .register_type::<OnPick>()
@@ -51,12 +47,12 @@ impl Plugin for PickingPlugin {
 
 impl PickingPlugin {
     /// [`Observer`] that triggers the [`OnPick`] event for one specific or all [`Picker`] entities.
-    pub fn run_picking(trigger: Trigger<RunPicking>, mut commands: Commands, pickers: Query<Entity, With<Picker>>) {
-        fn trigger_picking(target: Entity, mut commands: Commands) {
-            commands.trigger_targets(OnPick, target);
+    pub fn run_picking(trigger: On<RunPicking>, mut commands: Commands, pickers: Query<Entity, With<Picker>>) {
+        fn trigger_picking(entity: Entity, mut commands: Commands) {
+            commands.trigger(OnPick { entity });
         }
 
-        if let Some(target) = trigger.get_entity() {
+        if let Some(target) = trigger.event().entity {
             trigger_picking(target, commands.reborrow());
         } else {
             for target in pickers.iter() {
@@ -152,8 +148,8 @@ mod tests {
             .add_child(scorer)
             .id();
 
-        commands.trigger_targets(RunScoring, scorer);
-        commands.trigger_targets(RunPicking, actor);
+        commands.trigger(RunScoring::entity(scorer));
+        commands.trigger(RunPicking::entity(actor));
         world.flush();
 
         assert_eq!(my_action, world.get::<Picker>(actor).unwrap().picked);
@@ -176,8 +172,8 @@ mod tests {
             .add_child(scorer)
             .id();
 
-        commands.trigger_targets(RunScoring, scorer);
-        commands.trigger_targets(RunPicking, actor);
+        commands.trigger(RunScoring::entity(scorer));
+        commands.trigger(RunPicking::entity(actor));
         world.flush();
 
         assert_eq!(my_action, world.get::<Picker>(actor).unwrap().picked);

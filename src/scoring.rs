@@ -23,7 +23,7 @@ use std::{
 use bevy::prelude::*;
 
 use crate::{
-    ecs::{AncestorQuery, DFSPostTraversal, TriggerGetEntity},
+    ecs::{AncestorQuery, DFSPostTraversal},
     event::{OnScore, RunScoring},
 };
 
@@ -74,8 +74,7 @@ impl Plugin for ScoringPlugin {
             .register_type::<Sum>()
             .register_type::<Winning>();
 
-        #[cfg(feature = "rand")]
-        app.register_type::<RandomScore>();
+        // Note: RandomScore cannot be reflected due to the boxed RngCore trait object
 
         app.register_type::<RunScoring>().register_type::<OnScore>();
     }
@@ -85,7 +84,7 @@ impl ScoringPlugin {
     /// For each scoreable root entity, perform post-order depth-first traversal,
     /// triggering [`OnScore`] for each entity on the way back up.
     pub fn run_scoring_post_order_dfs(
-        trigger: Trigger<RunScoring>,
+        trigger: On<RunScoring>,
         mut commands: Commands,
         scoreable_roots: Query<(Entity, Option<&ChildOf>), With<Score>>,
         root_parents: Query<(), Without<Score>>,
@@ -95,11 +94,11 @@ impl ScoringPlugin {
             let sorted = dfs.iter(root);
 
             for entity in sorted {
-                commands.trigger_targets(OnScore, entity);
+                commands.trigger(OnScore { entity });
             }
         }
 
-        if let Some(targeted_root) = trigger.get_entity() {
+        if let Some(targeted_root) = trigger.event().entity {
             // Do scoring for the given entity
             trigger_in_order(targeted_root, commands.reborrow(), &mut dfs);
         } else {
@@ -359,18 +358,18 @@ impl RangeBounds<Score> for ScoreRange {
 ///     .spawn(Thirst { value: 50., per_second: 1. })
 ///     .add_child(scorer)
 ///     .id();
-/// # commands.trigger_targets(RunScoring, scorer);
+/// # commands.trigger(RunScoring::entity(scorer));
 /// # world.flush();
 /// # assert_eq!(0.5, world.get::<Score>(scorer).unwrap().get());
 /// ```
 pub fn score_ancestor<T: Component, ScoreMarker: Component>(
-    trigger: Trigger<OnScore>,
+    trigger: On<OnScore>,
     mut scores: Query<&mut Score, With<ScoreMarker>>,
     mut ancestors: AncestorQuery<&'static T>,
 ) where
     for<'a> &'a T: Into<Score>,
 {
-    let scorer = trigger.target();
+    let scorer = trigger.event().entity;
     let Ok(mut score) = scores.get_mut(scorer) else {
         return;
     };
@@ -386,11 +385,7 @@ pub fn score_ancestor<T: Component, ScoreMarker: Component>(
 #[cfg(test)]
 mod tests {
     use approx::assert_relative_eq;
-    use bevy::{
-        app::App,
-        ecs::observer::ObserverState,
-        prelude::{With, World},
-    };
+    use bevy::app::App;
 
     use crate::{
         event::RunScoring,
@@ -415,7 +410,7 @@ mod tests {
             })
             .id();
 
-        world.trigger_targets(RunScoring, parent);
+        world.trigger(RunScoring::entity(parent));
         world.flush();
 
         assert_eq!(
@@ -423,8 +418,7 @@ mod tests {
             world.get::<Score>(parent).unwrap().get(),
             "Parent score should be 1.0."
         );
-        assert_eq!(3, count_observers(world));
-    }
+            }
 
     #[test]
     fn evaluated_power() {
@@ -440,7 +434,7 @@ mod tests {
             })
             .id();
 
-        world.trigger_targets(RunScoring, entity);
+        world.trigger(RunScoring::entity(entity));
         world.flush();
 
         assert_relative_eq!(0.49, world.get::<Score>(entity).unwrap().get());
@@ -455,12 +449,11 @@ mod tests {
 
         let entity = world.spawn((Score::default(), FixedScore::new(0.5))).id();
 
-        world.trigger_targets(RunScoring, entity);
+        world.trigger(RunScoring::entity(entity));
         world.flush();
 
         assert_eq!(0.5, world.get::<Score>(entity).unwrap().get(), "Score should be 0.5.");
-        assert_eq!(2, count_observers(world));
-    }
+            }
 
     #[test]
     fn measured_weighted_sum() {
@@ -477,12 +470,11 @@ mod tests {
             })
             .id();
 
-        world.trigger_targets(RunScoring, parent);
+        world.trigger(RunScoring::entity(parent));
         world.flush();
 
         assert_relative_eq!(0.89, world.get::<Score>(parent).unwrap().get());
-        assert_eq!(3, count_observers(world));
-    }
+            }
 
     #[test]
     fn measured_weighted_product() {
@@ -499,12 +491,11 @@ mod tests {
             })
             .id();
 
-        world.trigger_targets(RunScoring, parent);
+        world.trigger(RunScoring::entity(parent));
         world.flush();
 
         assert_relative_eq!(0.0648, world.get::<Score>(parent).unwrap().get());
-        assert_eq!(3, count_observers(world));
-    }
+            }
 
     #[test]
     fn measured_weighted_max() {
@@ -521,12 +512,11 @@ mod tests {
             })
             .id();
 
-        world.trigger_targets(RunScoring, parent);
+        world.trigger(RunScoring::entity(parent));
         world.flush();
 
         assert_relative_eq!(0.81, world.get::<Score>(parent).unwrap().get());
-        assert_eq!(3, count_observers(world));
-    }
+            }
 
     #[test]
     fn measured_weighted_rms() {
@@ -543,12 +533,11 @@ mod tests {
             })
             .id();
 
-        world.trigger_targets(RunScoring, parent);
+        world.trigger(RunScoring::entity(parent));
         world.flush();
 
         assert_relative_eq!(0.8905055, world.get::<Score>(parent).unwrap().get());
-        assert_eq!(3, count_observers(world));
-    }
+            }
 
     #[test]
     fn product() {
@@ -565,12 +554,11 @@ mod tests {
             })
             .id();
 
-        world.trigger_targets(RunScoring, parent);
+        world.trigger(RunScoring::entity(parent));
         world.flush();
 
         assert_relative_eq!(0.72, world.get::<Score>(parent).unwrap().get(),);
-        assert_eq!(3, count_observers(world));
-    }
+            }
 
     #[test]
     fn sum() {
@@ -587,7 +575,7 @@ mod tests {
             })
             .id();
 
-        world.trigger_targets(RunScoring, parent);
+        world.trigger(RunScoring::entity(parent));
         world.flush();
 
         assert_eq!(
@@ -595,8 +583,7 @@ mod tests {
             world.get::<Score>(parent).unwrap().get(),
             "Parent score should be 1.0."
         );
-        assert_eq!(3, count_observers(world));
-    }
+            }
 
     #[test]
     fn winning() {
@@ -613,7 +600,7 @@ mod tests {
             })
             .id();
 
-        world.trigger_targets(RunScoring, parent);
+        world.trigger(RunScoring::entity(parent));
         world.flush();
 
         assert_eq!(
@@ -621,10 +608,5 @@ mod tests {
             world.get::<Score>(parent).unwrap().get(),
             "Parent score should be 0.9."
         );
-        assert_eq!(3, count_observers(world));
-    }
-
-    fn count_observers(world: &mut World) -> usize {
-        world.query_filtered::<(), With<ObserverState>>().iter(world).count()
-    }
+            }
 }

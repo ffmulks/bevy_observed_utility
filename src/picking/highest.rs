@@ -1,10 +1,14 @@
 use bevy::{
-    ecs::component::{ComponentHooks, StorageType},
+    ecs::{
+        component::StorageType,
+        lifecycle::{ComponentHook, HookContext},
+        world::DeferredWorld,
+    },
     prelude::*,
 };
 
 use crate::{
-    ecs::{CommandsExt, TriggerGetEntity},
+    ecs::DeferredWorldExt,
     event::{OnPick, OnPicked},
     picking::Picker,
     scoring::Score,
@@ -49,8 +53,8 @@ use crate::{
 ///     .add_child(scorer)
 ///     .id();
 ///
-/// commands.trigger_targets(RunScoring, scorer);
-/// commands.trigger_targets(RunPicking, actor);
+/// commands.trigger(RunScoring::entity(scorer));
+/// commands.trigger(RunPicking::entity(actor));
 /// # world.flush();
 /// # assert_eq!(my_action, world.get::<Picker>(actor).unwrap().picked);
 /// ```
@@ -62,7 +66,7 @@ pub struct Highest;
 impl Highest {
     /// [`Observer`] for the [`Highest`] [`Picker`] that picks the highest [`Score`](crate::scoring::Score).
     fn observer(
-        trigger: Trigger<OnPick>,
+        trigger: On<OnPick>,
         mut commands: Commands,
         mut targets: Query<(Entity, &Children, &mut Picker), With<Highest>>,
         scores: Query<(Entity, &Score)>,
@@ -86,18 +90,12 @@ impl Highest {
             }
 
             let action = picker.pick(highest_score_entity.map(|(entity, _)| entity));
-            commands.trigger_targets(OnPicked { action }, target);
+            commands.trigger(OnPicked { entity: target, action });
         }
 
-        if let Some(target) = trigger.get_entity() {
-            let Ok((target, children, picker)) = targets.get_mut(target) else {
-                return;
-            };
+        let event_entity = trigger.event().entity;
+        if let Ok((target, children, picker)) = targets.get_mut(event_entity) {
             run(target, commands.reborrow(), children, picker, &scores);
-        } else {
-            for (target, children, picker) in &mut targets {
-                run(target, commands.reborrow(), children, picker, &scores);
-            }
         }
     }
 }
@@ -106,15 +104,12 @@ impl Component for Highest {
     const STORAGE_TYPE: StorageType = StorageType::Table;
     type Mutability = bevy::ecs::component::Immutable;
 
-    fn register_component_hooks(hooks: &mut ComponentHooks) {
-        hooks.on_add(|mut world, _entity| {
+    fn on_add() -> Option<ComponentHook> {
+        Some(|mut world: DeferredWorld, _context: HookContext| {
             #[derive(Resource, Default)]
             struct HighestObserverSpawned;
 
-            world
-                .commands()
-                .once::<HighestObserverSpawned>()
-                .observe(Self::observer);
-        });
+            world.once::<HighestObserverSpawned>().observe(Self::observer);
+        })
     }
 }

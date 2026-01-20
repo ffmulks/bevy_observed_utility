@@ -18,7 +18,6 @@
 use bevy::{ecs::component::ComponentId, prelude::*};
 
 use crate::{
-    ecs::TargetedAction,
     event::{ActionEndReason, OnActionEnded, OnActionInitiated, RequestAction},
     picking::Picker,
 };
@@ -43,11 +42,11 @@ impl ActionPlugin {
     /// [`System`] that listens for [`RequestAction`] events and cancels the current action
     /// and initiates the picked action for the target actor entity.
     pub fn on_request_cancel_and_initiate(
-        trigger: Trigger<RequestAction>,
+        trigger: On<RequestAction>,
         mut commands: Commands,
         mut actors: Query<(&Picker, Option<&CurrentAction>)>,
     ) {
-        let actor = trigger.target();
+        let actor = trigger.event().entity;
         let requested = trigger.event().action;
         if let Ok((picker, current_action)) = actors.get_mut(actor) {
             let current_action = current_action.map(|ca| ca.0);
@@ -60,30 +59,27 @@ impl ActionPlugin {
                 }
 
                 // Cancel the current action
-                commands.trigger_targets(
-                    OnActionEnded::cancelled(current_action),
-                    TargetedAction(actor, current_action),
-                );
+                commands.trigger(OnActionEnded::cancelled(actor, current_action));
             }
 
             // Update the current action
             commands.entity(actor).insert(CurrentAction(next_action));
             // Trigger the picked action
-            commands.trigger_targets(
-                OnActionInitiated { action: next_action },
-                TargetedAction(actor, next_action),
-            );
+            commands.trigger(OnActionInitiated {
+                entity: actor,
+                action: next_action,
+            });
         }
     }
 
     /// [`Observer`] that listens for [`OnActionEnded`] events and triggers a new [`RequestAction`] event for the target actor entity.
-    pub fn on_ended_request_again(trigger: Trigger<OnActionEnded>, mut commands: Commands) {
-        let actor = trigger.target();
+    pub fn on_ended_request_again(trigger: On<OnActionEnded>, mut commands: Commands) {
+        let actor = trigger.event().entity;
 
         match trigger.event().reason {
             ActionEndReason::Completed => {
                 // Pick a new action
-                commands.trigger_targets(RequestAction { action: None }, actor);
+                commands.trigger(RequestAction::picked(actor));
             }
             ActionEndReason::Cancelled => {
                 // Do nothing
@@ -103,16 +99,20 @@ impl ActionPlugin {
 #[reflect(Component)]
 pub struct CurrentAction(pub ComponentId);
 
-/// [`Observer`] that listens for [`OnActionInitiated`] events targeting
-/// the specified `Action` [`Component`] and inserts a [`Default`] instance of it
-/// onto the actor entity.
+/// [`Observer`] that listens for [`OnActionInitiated`] events
+/// and inserts a [`Default`] instance of the `Action` [`Component`] onto the actor entity.
 ///
 /// Alternatively, use [`on_action_initiated_insert_from_resource`] to insert an instance from a [`Resource`].
 pub fn on_action_initiated_insert_default<Action: Component + Default>(
-    trigger: Trigger<OnActionInitiated, Action>,
+    trigger: On<OnActionInitiated>,
     mut commands: Commands,
+    actions: Query<(), With<Action>>,
 ) {
-    let actor = trigger.target();
+    let actor = trigger.event().entity;
+    // Don't insert if the entity already has the component
+    if actions.contains(actor) {
+        return;
+    }
     commands.entity(actor).insert(Action::default());
 }
 
@@ -122,17 +122,17 @@ pub fn on_action_initiated_insert_default<Action: Component + Default>(
 ///
 /// Alternatively, use [`on_action_initiated_insert_default`] to insert a [`Default`] instance.
 pub fn on_action_initiated_insert_from_resource<Action: Component + Resource + Clone>(
-    trigger: Trigger<OnActionInitiated, Action>,
+    trigger: On<OnActionInitiated>,
     mut commands: Commands,
     resource: Res<Action>,
 ) {
-    let actor = trigger.target();
+    let actor = trigger.event().entity;
     commands.entity(actor).insert(resource.clone());
 }
 
 /// [`Observer`] that listens for [`OnActionEnded`] events targeting
 /// the specified `Action` [`Component`] and removes the component from the actor entity.
-pub fn on_action_ended_remove<Action: Component>(trigger: Trigger<OnActionEnded, Action>, mut commands: Commands) {
-    let actor = trigger.target();
+pub fn on_action_ended_remove<Action: Component>(trigger: On<OnActionEnded>, mut commands: Commands) {
+    let actor = trigger.event().entity;
     commands.entity(actor).remove::<Action>();
 }

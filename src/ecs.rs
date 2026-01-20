@@ -2,49 +2,16 @@
 
 use std::{collections::VecDeque, iter::FusedIterator, marker::PhantomData};
 
-use hashbrown::hash_map::Entry;
-
 use bevy::{
     ecs::{
-        component::ComponentId,
+        archetype::ArchetypeId,
         entity::EntityHashMap,
-        observer::TriggerTargets,
         query::{QueryData, QueryEntityError, QueryFilter, ReadOnlyQueryData},
         system::{IntoObserverSystem, SystemParam},
+        world::DeferredWorld,
     },
     prelude::*,
 };
-
-/// A [`TriggerTargets`] used by the action [`Event`]s to trigger an action [`ComponentId`] for a given entity.
-#[derive(Reflect, Clone, Copy, PartialEq, Eq, Debug)]
-#[reflect(PartialEq, Debug)]
-pub struct TargetedAction(pub Entity, pub ComponentId);
-
-impl TriggerTargets for TargetedAction {
-    #[inline]
-    fn components(&self) -> impl Iterator<Item = ComponentId> + Clone + '_ {
-        std::iter::once(self.1)
-    }
-
-    #[inline]
-    fn entities(&self) -> impl Iterator<Item = Entity> + Clone + '_ {
-        std::iter::once(self.0)
-    }
-}
-
-/// [`Trigger`] extension trait that provides checked access to [`Trigger::entity`].
-pub trait TriggerGetEntity {
-    /// Returns the triggered [`Entity`], but only if it's not [`Entity::PLACEHOLDER`].
-    #[must_use]
-    fn get_entity(&self) -> Option<Entity>;
-}
-
-impl<E> TriggerGetEntity for Trigger<'_, E> {
-    #[inline]
-    fn get_entity(&self) -> Option<Entity> {
-        Some(self.target()).filter(|e| e != &Entity::PLACEHOLDER)
-    }
-}
 
 /// A [`Query`] wrapper that finds the closest ancestor entity with a given component.
 /// Uses a cache to speed up subsequent queries.
@@ -76,10 +43,7 @@ impl<'w, T: ReferenceType> AncestorQuery<'w, '_, T> {
                 }
                 Ok((false, None)) => {
                     // No parent found
-                    return Err(QueryEntityError::QueryDoesNotMatch(
-                        current,
-                        bevy::ecs::archetype::ArchetypeId::EMPTY,
-                    ));
+                    return Err(QueryEntityError::QueryDoesNotMatch(current, ArchetypeId::EMPTY));
                 }
                 Err(e) => {
                     return Err(e);
@@ -102,14 +66,13 @@ impl<T: Component> AncestorQuery<'_, '_, &'static T> {
     /// If the entity does not exist or the component is not found.
     pub fn get(&mut self, start: Entity) -> Result<&T, QueryEntityError> {
         // Check the cache first
-        if let Entry::Occupied(entry) = self.cache.entry(start) {
-            if self.fetch.contains(*entry.get()) {
+        if let Some(&cached) = self.cache.get(&start) {
+            if self.fetch.contains(cached) {
                 // Cache hit
-                return self.fetch.get(*entry.get());
+                return self.fetch.get(cached);
             }
-
-            // Cache miss
-            entry.remove();
+            // Cache miss - remove stale entry
+            self.cache.remove(&start);
         }
 
         let found = self.find(start)?;
@@ -123,16 +86,15 @@ impl<T: Component<Mutability = bevy::ecs::component::Mutable>> AncestorQuery<'_,
     /// # Errors
     ///
     /// If the entity does not exist or the component is not found.
-    pub fn get_mut(&mut self, start: Entity) -> Result<Mut<T>, QueryEntityError> {
+    pub fn get_mut(&mut self, start: Entity) -> Result<Mut<'_, T>, QueryEntityError> {
         // Check the cache first
-        if let Entry::Occupied(entry) = self.cache.entry(start) {
-            if self.fetch.contains(*entry.get()) {
+        if let Some(&cached) = self.cache.get(&start) {
+            if self.fetch.contains(cached) {
                 // Cache hit
-                return self.fetch.get_mut(*entry.get());
+                return self.fetch.get_mut(cached);
             }
-
-            // Cache miss
-            entry.remove();
+            // Cache miss - remove stale entry
+            self.cache.remove(&start);
         }
 
         let found = self.find(start)?;
@@ -143,7 +105,7 @@ impl<T: Component<Mutability = bevy::ecs::component::Mutable>> AncestorQuery<'_,
 /// A [`QueryData`] supertrait for `&T` and `&mut T` reference types.
 pub trait ReferenceType: QueryData + 'static {
     /// The [`Has`] type for this reference type.
-    type Has: for<'a> ReadOnlyQueryData<Item<'a> = bool>;
+    type Has: for<'w, 's> ReadOnlyQueryData<Item<'w, 's> = bool>;
 }
 
 impl<T: Component> ReferenceType for &'static T {
@@ -212,6 +174,18 @@ pub trait CommandsExt {
 impl CommandsExt for Commands<'_, '_> {
     fn once<R: Resource + Default>(&mut self) -> OnceCommands<'_, '_, R> {
         OnceCommands::new(self.reborrow())
+    }
+}
+
+/// Extension trait for [`DeferredWorld`] to get a once-commands wrapper.
+pub trait DeferredWorldExt {
+    /// Returns a [`Commands`] wrapper that provides a way to run commands only once.
+    fn once<R: Resource + Default>(&mut self) -> OnceCommands<'_, '_, R>;
+}
+
+impl DeferredWorldExt for DeferredWorld<'_> {
+    fn once<R: Resource + Default>(&mut self) -> OnceCommands<'_, '_, R> {
+        OnceCommands::new(self.commands())
     }
 }
 
