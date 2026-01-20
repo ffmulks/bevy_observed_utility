@@ -10,6 +10,7 @@ See the [documentation](https://docs.rs/bevy_observed_utility/latest/bevy_observ
 [dependencies]
 bevy_observed_utility = "0.4.0"
 ```
+## Bevy Compatibility
 
 | bevy | bevy_observed_utility |
 | ---- | --------------------- |
