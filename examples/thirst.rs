@@ -72,13 +72,7 @@ pub fn quench_thirst(
         thirst.value = (thirst.value - drink.per_second * time.delta_secs()).max(0.);
         println!("DRINKING!");
         if thirst.value <= drink.until {
-            commands.trigger_targets(
-                OnActionEnded {
-                    action: actions.drink,
-                    reason: ActionEndReason::Completed,
-                },
-                TargetedAction(actor, actions.drink),
-            )
+            commands.trigger(OnActionEnded::completed(actor, actions.drink));
         }
     }
 }

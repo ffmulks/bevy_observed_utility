@@ -43,7 +43,7 @@ fn bench_scoring(b: &mut Bencher, scoring_depth: usize, num_trees: usize) {
     }
     world.flush();
     b.iter(|| {
-        world.trigger(RunScoring);
+        world.trigger(RunScoring::all());
     });
 }
 

@@ -45,14 +45,34 @@ use bevy::{ecs::component::ComponentId, prelude::*};
 #[derive(Event, Reflect)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 #[reflect(PartialEq, Debug, Default)]
-pub struct RunScoring;
+pub struct RunScoring {
+    /// The target entity to score, or [`None`] to score all entities.
+    pub entity: Option<Entity>,
+}
+
+impl RunScoring {
+    /// Creates a new [`RunScoring`] event for all entities.
+    #[must_use]
+    pub fn all() -> Self {
+        Self { entity: None }
+    }
+
+    /// Creates a new [`RunScoring`] event for a specific entity.
+    #[must_use]
+    pub fn entity(entity: Entity) -> Self {
+        Self { entity: Some(entity) }
+    }
+}
 
 /// This [`Event`] is listened to by scoring systems to calculate the score(s) for a given entity.
 /// DO NOT TRIGGER MANUALLY, trigger [`RunScoring`] instead.
 #[derive(Event, Reflect)]
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
-#[reflect(PartialEq, Debug, Default)]
-pub struct OnScore;
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[reflect(PartialEq, Debug)]
+pub struct OnScore {
+    /// The entity being scored.
+    pub entity: Entity,
+}
 
 ////////////////////////////////////////////////////////////
 // Picking events
@@ -63,13 +83,33 @@ pub struct OnScore;
 #[derive(Event, Reflect)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 #[reflect(PartialEq, Debug, Default)]
-pub struct RunPicking;
+pub struct RunPicking {
+    /// The target entity to pick an action for, or [`None`] to pick for all entities.
+    pub entity: Option<Entity>,
+}
+
+impl RunPicking {
+    /// Creates a new [`RunPicking`] event for all entities.
+    #[must_use]
+    pub fn all() -> Self {
+        Self { entity: None }
+    }
+
+    /// Creates a new [`RunPicking`] event for a specific entity.
+    #[must_use]
+    pub fn entity(entity: Entity) -> Self {
+        Self { entity: Some(entity) }
+    }
+}
 
 /// Listen to this [`Event`] to handle picking an action for the target actor entity.
 #[derive(Event, Reflect)]
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
-#[reflect(PartialEq, Debug, Default)]
-pub struct OnPick;
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[reflect(PartialEq, Debug)]
+pub struct OnPick {
+    /// The entity picking an action.
+    pub entity: Entity,
+}
 
 /// Listen to this [`Event`] to check which action was picked for the target actor entity.
 /// This [`Event`] is triggered by [`Picker`]s to indicate that an action has been picked for the target actor entity.
@@ -79,6 +119,8 @@ pub struct OnPick;
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[reflect(PartialEq, Debug)]
 pub struct OnPicked {
+    /// The entity that picked an action.
+    pub entity: Entity,
     /// [`ComponentId`] of the action that was picked.
     pub action: ComponentId,
 }
@@ -88,14 +130,28 @@ pub struct OnPicked {
 ////////////////////////////////////////////////////////////
 
 /// Trigger this [`Event`] to request a specific action or the picked action to be initiated for the target actor entity.
-///
-/// This event SHOULD NOT be triggered without a target entity.
 #[derive(Event, Reflect)]
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
-#[reflect(PartialEq, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[reflect(PartialEq, Debug)]
 pub struct RequestAction {
+    /// The entity to request the action for.
+    pub entity: Entity,
     /// The [`ComponentId`] of the action that was requested, if any.
     pub action: Option<ComponentId>,
+}
+
+impl RequestAction {
+    /// Creates a new [`RequestAction`] event for the picked action.
+    #[must_use]
+    pub fn picked(entity: Entity) -> Self {
+        Self { entity, action: None }
+    }
+
+    /// Creates a new [`RequestAction`] event for a specific action.
+    #[must_use]
+    pub fn specific(entity: Entity, action: ComponentId) -> Self {
+        Self { entity, action: Some(action) }
+    }
 }
 
 /// This [`Event`] is triggered by action lifecycle to indicate that they have been initiated.
@@ -103,6 +159,8 @@ pub struct RequestAction {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[reflect(PartialEq, Debug)]
 pub struct OnActionInitiated {
+    /// The entity that initiated the action.
+    pub entity: Entity,
     /// [`ComponentId`] of the action that was initiated.
     pub action: ComponentId,
 }
@@ -115,6 +173,8 @@ pub struct OnActionInitiated {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[reflect(PartialEq, Debug)]
 pub struct OnActionEnded {
+    /// The entity whose action ended.
+    pub entity: Entity,
     /// [`ComponentId`] of the action that was finished.
     pub action: ComponentId,
     /// The reason the action was finished.
@@ -124,8 +184,9 @@ pub struct OnActionEnded {
 impl OnActionEnded {
     /// Creates a new [`Completed`][`ActionEndReason::Completed`] [`OnActionEnded`] event with the given action.
     #[must_use]
-    pub fn completed(action: ComponentId) -> Self {
+    pub fn completed(entity: Entity, action: ComponentId) -> Self {
         Self {
+            entity,
             action,
             reason: ActionEndReason::Completed,
         }
@@ -133,8 +194,9 @@ impl OnActionEnded {
 
     /// Creates a new [`Cancelled`][`ActionEndReason::Cancelled`] [`OnActionEnded`] event with the given action.
     #[must_use]
-    pub fn cancelled(action: ComponentId) -> Self {
+    pub fn cancelled(entity: Entity, action: ComponentId) -> Self {
         Self {
+            entity,
             action,
             reason: ActionEndReason::Cancelled,
         }

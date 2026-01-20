@@ -1,9 +1,13 @@
 use bevy::{
-    ecs::component::{ComponentHooks, StorageType},
+    ecs::{
+        component::StorageType,
+        lifecycle::{ComponentHook, HookContext},
+        world::DeferredWorld,
+    },
     prelude::*,
 };
 
-use crate::{ecs::CommandsExt, event::OnScore, scoring::Score};
+use crate::{ecs::DeferredWorldExt, event::OnScore, scoring::Score};
 
 /// [`Score`] [`Component`] that always scores a fixed value.
 ///
@@ -21,7 +25,7 @@ use crate::{ecs::CommandsExt, event::OnScore, scoring::Score};
 /// commands
 ///     .spawn((FixedScore::new(0.5), Score::default()))
 /// #   .id();
-/// # commands.trigger_targets(RunScoring, scorer);
+/// # commands.trigger(RunScoring::entity(scorer));
 /// # world.flush();
 /// # assert_eq!(world.get::<Score>(scorer).unwrap().get(), 0.5);
 /// ```
@@ -51,8 +55,9 @@ impl FixedScore {
     }
 
     /// [`Observer`] for [`FixedScore`] [`Score`] entities that scores itself.
-    fn observer(trigger: Trigger<OnScore>, mut target: Query<(&mut Score, &FixedScore)>) {
-        let Ok((mut actor_score, settings)) = target.get_mut(trigger.target()) else {
+    fn observer(trigger: On<OnScore>, mut target: Query<(&mut Score, &FixedScore)>) {
+        let entity = trigger.event().entity;
+        let Ok((mut actor_score, settings)) = target.get_mut(entity) else {
             // The entity is not scoring for fixed.
             return;
         };
@@ -65,15 +70,12 @@ impl Component for FixedScore {
     const STORAGE_TYPE: StorageType = StorageType::Table;
     type Mutability = bevy::ecs::component::Immutable;
 
-    fn register_component_hooks(hooks: &mut ComponentHooks) {
-        hooks.on_add(|mut world, _entity| {
+    fn on_add() -> Option<ComponentHook> {
+        Some(|mut world: DeferredWorld, _context: HookContext| {
             #[derive(Resource, Default)]
             struct FixedScoreObserverSpawned;
 
-            world
-                .commands()
-                .once::<FixedScoreObserverSpawned>()
-                .observe(Self::observer);
-        });
+            world.once::<FixedScoreObserverSpawned>().observe(Self::observer);
+        })
     }
 }

@@ -1,9 +1,13 @@
 use bevy::{
-    ecs::component::{ComponentHooks, StorageType},
+    ecs::{
+        component::StorageType,
+        lifecycle::{ComponentHook, HookContext},
+        world::DeferredWorld,
+    },
     prelude::*,
 };
 
-use crate::{ecs::CommandsExt, event::OnScore, scoring::Score};
+use crate::{ecs::DeferredWorldExt, event::OnScore, scoring::Score};
 
 /// [`Score`] [`Component`] that scores the product of all child [`Score`] entities.
 ///
@@ -26,7 +30,7 @@ use crate::{ecs::CommandsExt, event::OnScore, scoring::Score};
 ///         parent.spawn((FixedScore::new(0.3), Score::default()));
 ///     })
 /// #   .id();
-/// # commands.trigger_targets(RunScoring, scorer);
+/// # commands.trigger(RunScoring::entity(scorer));
 /// # world.flush();
 /// # assert_relative_eq!(world.get::<Score>(scorer).unwrap().get(), 0.21);
 /// ```
@@ -68,8 +72,9 @@ impl Product {
     }
 
     /// [`Observer`] for [`Product`] [`Score`] entities that scores based on all child [`Score`] entities.
-    fn observer(trigger: Trigger<OnScore>, target: Query<(&Children, &Product)>, mut scores: Query<&mut Score>) {
-        let Ok((children, settings)) = target.get(trigger.target()) else {
+    fn observer(trigger: On<OnScore>, target: Query<(&Children, &Product)>, mut scores: Query<&mut Score>) {
+        let entity = trigger.event().entity;
+        let Ok((children, settings)) = target.get(entity) else {
             // The entity is not scoring for product.
             return;
         };
@@ -92,7 +97,7 @@ impl Product {
             product = 0.;
         }
 
-        let Ok(mut actor_score) = scores.get_mut(trigger.target()) else {
+        let Ok(mut actor_score) = scores.get_mut(entity) else {
             // The entity is not scoring.
             return;
         };
@@ -105,15 +110,12 @@ impl Component for Product {
     const STORAGE_TYPE: StorageType = StorageType::Table;
     type Mutability = bevy::ecs::component::Immutable;
 
-    fn register_component_hooks(hooks: &mut ComponentHooks) {
-        hooks.on_add(|mut world, _entity| {
+    fn on_add() -> Option<ComponentHook> {
+        Some(|mut world: DeferredWorld, _context: HookContext| {
             #[derive(Resource, Default)]
             struct ProductObserverSpawned;
 
-            world
-                .commands()
-                .once::<ProductObserverSpawned>()
-                .observe(Self::observer);
-        });
+            world.once::<ProductObserverSpawned>().observe(Self::observer);
+        })
     }
 }

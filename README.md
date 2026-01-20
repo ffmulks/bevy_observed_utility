@@ -8,14 +8,10 @@ See the [documentation](https://docs.rs/bevy_observed_utility/latest/bevy_observ
 
 ```toml
 [dependencies]
-bevy_observed_utility = "0.3.0"
+bevy_observed_utility = "0.4.0"
 ```
 
-| Bevy Version | Crate Version |
-|--------------|---------------|
-| 0.14         | 0.1.0         |
-| 0.15         | 0.2.0         |
-| 0.16         | 0.3.0         |
+Requires Bevy 0.17.
 
 ## Features
 

@@ -1,11 +1,15 @@
 use bevy::{
-    ecs::component::{ComponentHooks, StorageType},
+    ecs::{
+        component::StorageType,
+        lifecycle::{ComponentHook, HookContext},
+        world::DeferredWorld,
+    },
     prelude::*,
 };
-use rand::{RngCore, seq::IteratorRandom};
+use rand::{seq::IteratorRandom, RngCore};
 
 use crate::{
-    ecs::{CommandsExt, TriggerGetEntity},
+    ecs::DeferredWorldExt,
     event::{OnPick, OnPicked},
     picking::Picker,
 };
@@ -17,7 +21,7 @@ use crate::{
 /// ```rust
 /// use bevy::prelude::*;
 /// use bevy_observed_utility::prelude::*;
-/// use rand::prelude::{StdRng, SeedableRng};
+/// use rand::{prelude::StdRng, SeedableRng};
 ///
 /// # let mut app = App::new();
 /// # app.add_plugins(ObservedUtilityPlugins::RealTime);
@@ -29,8 +33,8 @@ use crate::{
 ///
 /// // We need the ComponentIds to initialize the Picker.
 /// // It's recommended to use a resource to store these.
-/// let my_action = world.init_component::<MyAction>();
-/// let idle_action = world.init_component::<IdleAction>();
+/// let my_action = world.register_component::<MyAction>();
+/// let idle_action = world.register_component::<IdleAction>();
 ///
 /// # let mut commands = world.commands();
 /// // Spawn the scorer entity that will be picked by the actor.
@@ -45,13 +49,13 @@ use crate::{
 ///         Picker::new(idle_action)
 ///             // if the score entity is selected, my_action will be picked.
 ///             .with(scorer, my_action),
-///         PickRandom::new(StdRng::from_entropy()),
+///         PickRandom::new(StdRng::from_os_rng()),
 ///     ))
 ///     .add_child(scorer)
 ///     .id();
 ///
-/// commands.trigger_targets(RunScoring, scorer);
-/// commands.trigger_targets(RunPicking, actor);
+/// commands.trigger(RunScoring::entity(scorer));
+/// commands.trigger(RunPicking::entity(actor));
 /// # world.flush();
 /// # assert_eq!(my_action, world.get::<Picker>(actor).unwrap().picked);
 /// ```
@@ -78,25 +82,19 @@ impl PickRandom {
 
     /// [`Observer`] for the [`Random`] [`Picker`] that picks randomly.
     fn observer(
-        trigger: Trigger<OnPick>,
+        trigger: On<OnPick>,
         mut commands: Commands,
         mut targets: Query<(Entity, &mut Picker, &mut PickRandom)>,
     ) {
         fn run(target: Entity, mut commands: Commands, mut picker: Mut<Picker>, settings: &mut PickRandom) {
             let random = picker.choices.keys().choose(&mut *settings.rng()).copied();
             let action = picker.pick(random);
-            commands.trigger_targets(OnPicked { action }, target);
+            commands.trigger(OnPicked { entity: target, action });
         }
 
-        if let Some(target) = trigger.get_entity() {
-            let Ok((target, picker, settings)) = targets.get_mut(target) else {
-                return;
-            };
+        let event_entity = trigger.event().entity;
+        if let Ok((target, picker, settings)) = targets.get_mut(event_entity) {
             run(target, commands.reborrow(), picker, settings.into_inner());
-        } else {
-            for (target, picker, settings) in targets.iter_mut() {
-                run(target, commands.reborrow(), picker, settings.into_inner());
-            }
         }
     }
 }
@@ -109,14 +107,14 @@ impl<R: RngCore + Send + Sync + 'static> From<R> for PickRandom {
 
 impl Component for PickRandom {
     const STORAGE_TYPE: StorageType = StorageType::Table;
-    type Mutability = bevy::ecs::component::Immutable;
+    type Mutability = bevy::ecs::component::Mutable;
 
-    fn register_component_hooks(hooks: &mut ComponentHooks) {
-        hooks.on_add(|mut world, _entity, _component| {
+    fn on_add() -> Option<ComponentHook> {
+        Some(|mut world: DeferredWorld, _context: HookContext| {
             #[derive(Resource, Default)]
             struct RandomObserverSpawned;
 
-            world.commands().once::<RandomObserverSpawned>().observe(Self::observer);
-        });
+            world.once::<RandomObserverSpawned>().observe(Self::observer);
+        })
     }
 }

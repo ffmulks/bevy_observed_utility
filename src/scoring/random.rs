@@ -1,13 +1,17 @@
 use std::ops::RangeBounds;
 
 use bevy::{
-    ecs::component::{ComponentHooks, StorageType},
+    ecs::{
+        component::StorageType,
+        lifecycle::{ComponentHook, HookContext},
+        world::DeferredWorld,
+    },
     prelude::*,
 };
-use rand::{Rng, RngCore};
+use rand::{Rng as _, RngCore};
 
 use crate::{
-    ecs::CommandsExt,
+    ecs::DeferredWorldExt,
     event::OnScore,
     scoring::{Score, ScoreRange},
 };
@@ -19,7 +23,7 @@ use crate::{
 /// ```rust
 /// use bevy::prelude::*;
 /// use bevy_observed_utility::prelude::*;
-/// use rand::prelude::{StdRng, SeedableRng};
+/// use rand::{prelude::StdRng, SeedableRng};
 ///
 /// # let mut app = App::new();
 /// # app.add_plugins(ObservedUtilityPlugins::RealTime);
@@ -27,9 +31,9 @@ use crate::{
 /// # let mut commands = world.commands();
 /// # let scorer =
 /// commands
-///     .spawn((RandomScore::new(StdRng::from_entropy()), Score::default()))
+///     .spawn((RandomScore::new(StdRng::from_os_rng()), Score::default()))
 /// #   .id();
-/// # commands.trigger_targets(RunScoring, scorer);
+/// # commands.trigger(RunScoring::entity(scorer));
 /// # world.flush();
 /// ```
 pub struct RandomScore {
@@ -69,15 +73,16 @@ impl RandomScore {
         self.rng = Box::new(rng);
     }
 
-    fn observer(trigger: Trigger<OnScore>, mut target: Query<(&mut Score, &mut RandomScore)>) {
-        let Ok((mut actor_score, mut settings)) = target.get_mut(trigger.target()) else {
+    fn observer(trigger: On<OnScore>, mut target: Query<(&mut Score, &mut RandomScore)>) {
+        let entity = trigger.event().entity;
+        let Ok((mut actor_score, mut settings)) = target.get_mut(entity) else {
             // The entity is not scoring for random.
             return;
         };
 
         // TODO: We're assuming the range is inclusive, but it might not be.
         let range = settings.range.min_f32()..=settings.range.max_f32();
-        let value = settings.rng_mut().gen_range(range);
+        let value = settings.rng_mut().random_range(range);
 
         actor_score.set(value);
     }
@@ -85,17 +90,16 @@ impl RandomScore {
 
 impl Component for RandomScore {
     const STORAGE_TYPE: StorageType = StorageType::Table;
-    type Mutability = bevy::ecs::component::Immutable;
+    type Mutability = bevy::ecs::component::Mutable;
 
-    fn register_component_hooks(hooks: &mut ComponentHooks) {
-        hooks.on_add(|mut world, _entity| {
+    fn on_add() -> Option<ComponentHook> {
+        Some(|mut world: DeferredWorld, _context: HookContext| {
             #[derive(Resource, Default)]
             struct RandomScoreObserverSpawned;
 
             world
-                .commands()
                 .once::<RandomScoreObserverSpawned>()
                 .observe(Self::observer);
-        });
+        })
     }
 }

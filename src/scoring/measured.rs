@@ -1,9 +1,13 @@
 use bevy::{
-    ecs::component::{ComponentHooks, StorageType},
+    ecs::{
+        component::StorageType,
+        lifecycle::{ComponentHook, HookContext},
+        world::DeferredWorld,
+    },
     prelude::*,
 };
 
-use crate::{ecs::CommandsExt, event::OnScore, scoring::Score};
+use crate::{ecs::DeferredWorldExt, event::OnScore, scoring::Score};
 
 /// [`Score`] [`Component`] that scores based on a [`Measure`] of its child [`Score`] + [`Weighted`] entities.
 /// Child entities without a [`Weighted`] component are considered fully weighted (1.0).
@@ -35,7 +39,7 @@ use crate::{ecs::CommandsExt, event::OnScore, scoring::Score};
 ///         parent.spawn((Weighted::new(0.1), FixedScore::new(0.8), Score::default()));
 ///     })
 /// #   .id();
-/// # commands.trigger_targets(RunScoring, scorer);
+/// # commands.trigger(RunScoring::entity(scorer));
 /// # world.flush();
 /// # assert_relative_eq!(world.get::<Score>(scorer).unwrap().get(), 0.89);
 /// ```
@@ -72,11 +76,12 @@ impl Measured {
 
     /// [`Observer`] for [`Measured`] [`Score`] entities that scores based on all child [`Score`] entities.
     fn observer(
-        trigger: Trigger<OnScore>,
+        trigger: On<OnScore>,
         target: Query<(&Children, &Measured)>,
         mut scores: Query<(&mut Score, Option<&Weighted>)>,
     ) {
-        let Ok((children, settings)) = target.get(trigger.target()) else {
+        let entity = trigger.event().entity;
+        let Ok((children, settings)) = target.get(entity) else {
             // The entity is not scoring for measured.
             return;
         };
@@ -89,7 +94,7 @@ impl Measured {
 
         let result = settings.calculate(inputs);
 
-        let Ok((mut actor_score, _)) = scores.get_mut(trigger.target()) else {
+        let Ok((mut actor_score, _)) = scores.get_mut(entity) else {
             // The entity is not scoring.
             return;
         };
@@ -102,16 +107,13 @@ impl Component for Measured {
     const STORAGE_TYPE: StorageType = StorageType::Table;
     type Mutability = bevy::ecs::component::Immutable;
 
-    fn register_component_hooks(hooks: &mut ComponentHooks) {
-        hooks.on_add(|mut world, _entity| {
+    fn on_add() -> Option<ComponentHook> {
+        Some(|mut world: DeferredWorld, _context: HookContext| {
             #[derive(Resource, Default)]
             struct MeasuredObserverSpawned;
 
-            world
-                .commands()
-                .once::<MeasuredObserverSpawned>()
-                .observe(Self::observer);
-        });
+            world.once::<MeasuredObserverSpawned>().observe(Self::observer);
+        })
     }
 }
 

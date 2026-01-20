@@ -142,11 +142,8 @@
 //!         thirst.value = (thirst.value - drinking.per_second * time.delta_secs()).max(0.);
 //!         // If the thirst is low enough, finish drinking.
 //!         if thirst.value <= drinking.until {
-//!             /// We'll need that ActionIds resource we created earlier to identify the action.
-//!             commands.trigger_targets(
-//!                 OnActionEnded::completed(actions.drinking),
-//!                 TargetedAction(actor, actions.drinking),
-//!             );
+//!             // We'll need that ActionIds resource we created earlier to identify the action.
+//!             commands.trigger(OnActionEnded::completed(actor, actions.drinking));
 //!         }
 //!     }
 //! }
@@ -164,7 +161,7 @@
 //!     // Let's build the tree from the bottom up, since it'll be easier to insert the Picker on the actor last.
 //!     // First, the entity that scores thirst.
 //!     let thirst = commands.spawn((Thirsty, Score::default())).id();
-//!     
+//!
 //!     // Spawn the actor entity
 //!     commands
 //!         .spawn((
@@ -237,8 +234,8 @@ pub mod prelude {
             CurrentAction, on_action_ended_remove, on_action_initiated_insert_default,
             on_action_initiated_insert_from_resource,
         },
-        ecs::{AncestorQuery, TargetedAction},
-        event::{ActionEndReason, OnActionEnded, OnActionInitiated, OnPick, OnPicked, OnScore, RunPicking, RunScoring},
+        ecs::AncestorQuery,
+        event::{ActionEndReason, OnActionEnded, OnActionInitiated, OnPick, OnPicked, OnScore, RequestAction, RunPicking, RunScoring},
         picking::{FirstToScore, Highest, Picker},
         scoring::{
             AllOrNothing, Evaluated, Evaluator, FixedScore, LinearEvaluator, Measure, Measured, PowerEvaluator,
@@ -263,9 +260,9 @@ pub enum ObservedUtilityPlugins {
     /// This does NOT include the [`RealtimeLifecyclePlugin`],
     /// so you'll need to run scoring, picking, and action selection manually.
     ///
-    /// To do so, trigger the [`RunScoring`] and [`RunPicking`] events un-targeted,
+    /// To do so, trigger the [`RunScoring`] and [`RunPicking`] events,
     /// which will score and pick actions for all entities with the appropriate components.
-    /// Then trigger the [`RequestAction`] event targeted at an actor entity when you want them to perform an action.
+    /// Then trigger the [`RequestAction`] event for an actor entity when you want them to perform an action.
     TurnBased,
 }
 
@@ -287,7 +284,7 @@ impl PluginGroup for ObservedUtilityPlugins {
 ///
 /// This plugin is meant for real-time games, but might be useful for turn-based games as well.
 pub struct RealtimeLifecyclePlugin {
-    /// The [`ScheduleLabel`] to run scoring and picking, and action selection in.                                                      
+    /// The [`ScheduleLabel`] to run scoring and picking, and action selection in.
     pub score_pick_perform_in: InternedScheduleLabel,
 }
 
@@ -311,8 +308,8 @@ impl Default for RealtimeLifecyclePlugin {
 impl RealtimeLifecyclePlugin {
     /// [`System`] that automatically runs scoring and picking [`Observer`]s.
     pub fn score_and_pick(mut commands: Commands) {
-        commands.trigger(RunScoring);
-        commands.trigger(RunPicking);
+        commands.trigger(RunScoring::all());
+        commands.trigger(RunPicking::all());
     }
 
     /// [`System`] that requests a new action for an actor if they're currently "idling",
@@ -323,7 +320,7 @@ impl RealtimeLifecyclePlugin {
     ) {
         for (actor, picker, current_action) in actors.iter() {
             if current_action.is_some_and(|ca| picker.is_default(ca.0)) || current_action.is_none() {
-                commands.trigger_targets(RequestAction { action: None }, actor);
+                commands.trigger(RequestAction::picked(actor));
             }
         }
     }
