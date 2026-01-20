@@ -11,7 +11,12 @@ See the [documentation](https://docs.rs/bevy_observed_utility/latest/bevy_observ
 bevy_observed_utility = "0.4.0"
 ```
 
-Requires Bevy 0.17.
+| bevy | bevy_observed_utility |
+| ---- | --------------------- |
+| 0.17 | 0.4                   |
+| 0.16 | 0.3                   |
+| 0.15 | 0.2                   |
+| 0.14 | 0.1                   |
 
 ## Features
 
