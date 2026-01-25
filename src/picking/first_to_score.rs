@@ -104,7 +104,8 @@ impl FirstToScore {
         ) {
             for (score_entity, score) in scores.iter_many(children) {
                 if *score >= settings.threshold() {
-                    picker.pick(Some(score_entity));
+                    let action = picker.pick(Some(score_entity));
+                    commands.trigger(OnPicked { entity: target, action });
                     return;
                 }
             }
