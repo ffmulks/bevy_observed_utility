@@ -150,7 +150,10 @@ impl RequestAction {
     /// Creates a new [`RequestAction`] event for a specific action.
     #[must_use]
     pub fn specific(entity: Entity, action: ComponentId) -> Self {
-        Self { entity, action: Some(action) }
+        Self {
+            entity,
+            action: Some(action),
+        }
     }
 }
 

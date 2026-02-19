@@ -78,11 +78,7 @@ fn test_hierarchical_scoring() {
     world.flush();
 
     // Parent should have the sum of children
-    assert_relative_eq!(
-        0.7,
-        world.get::<Score>(parent).unwrap().get(),
-        epsilon = 0.0001
-    );
+    assert_relative_eq!(0.7, world.get::<Score>(parent).unwrap().get(), epsilon = 0.0001);
 }
 
 /// Test the picking lifecycle with FirstToScore strategy
@@ -100,10 +96,7 @@ fn test_picking_first_to_score() {
     let scorer = commands.spawn((Score::new(0.6), MyMarker)).id();
 
     let actor = commands
-        .spawn((
-            Picker::new(idle_action).with(scorer, my_action),
-            FirstToScore::new(0.5),
-        ))
+        .spawn((Picker::new(idle_action).with(scorer, my_action), FirstToScore::new(0.5)))
         .add_child(scorer)
         .id();
     world.flush();
@@ -165,7 +158,9 @@ fn test_action_lifecycle() {
     let idle_action = world.register_component::<IdleAction>();
 
     let mut commands = world.commands();
-    let actor = commands.spawn((Picker::new(idle_action), CurrentAction(idle_action))).id();
+    let actor = commands
+        .spawn((Picker::new(idle_action), CurrentAction(idle_action)))
+        .id();
     world.flush();
 
     // Request the action
@@ -221,26 +216,22 @@ fn test_action_cancellation() {
             }
         },
     );
-    app.add_observer(
-        |trigger: On<OnActionEnded>, mut commands: Commands, world: &World| {
-            let actor = trigger.event().entity;
-            let action = trigger.event().action;
-            let action1_id = world.component_id::<Action1>().unwrap();
-            if action == action1_id {
-                commands.entity(actor).remove::<Action1>();
-            }
-        },
-    );
-    app.add_observer(
-        |trigger: On<OnActionEnded>, mut commands: Commands, world: &World| {
-            let actor = trigger.event().entity;
-            let action = trigger.event().action;
-            let action2_id = world.component_id::<Action2>().unwrap();
-            if action == action2_id {
-                commands.entity(actor).remove::<Action2>();
-            }
-        },
-    );
+    app.add_observer(|trigger: On<OnActionEnded>, mut commands: Commands, world: &World| {
+        let actor = trigger.event().entity;
+        let action = trigger.event().action;
+        let action1_id = world.component_id::<Action1>().unwrap();
+        if action == action1_id {
+            commands.entity(actor).remove::<Action1>();
+        }
+    });
+    app.add_observer(|trigger: On<OnActionEnded>, mut commands: Commands, world: &World| {
+        let actor = trigger.event().entity;
+        let action = trigger.event().action;
+        let action2_id = world.component_id::<Action2>().unwrap();
+        if action == action2_id {
+            commands.entity(actor).remove::<Action2>();
+        }
+    });
 
     let world = app.world_mut();
 
@@ -249,7 +240,9 @@ fn test_action_cancellation() {
     let idle_action = world.register_component::<IdleAction>();
 
     let mut commands = world.commands();
-    let actor = commands.spawn((Picker::new(idle_action), CurrentAction(idle_action))).id();
+    let actor = commands
+        .spawn((Picker::new(idle_action), CurrentAction(idle_action)))
+        .id();
     world.flush();
 
     // Start action1
@@ -263,7 +256,10 @@ fn test_action_cancellation() {
     world.commands().trigger(RequestAction::specific(actor, action2_id));
     world.flush();
 
-    assert!(world.get::<Action1>(actor).is_none(), "Action1 should be removed/cancelled");
+    assert!(
+        world.get::<Action1>(actor).is_none(),
+        "Action1 should be removed/cancelled"
+    );
     assert!(world.get::<Action2>(actor).is_some(), "Action2 should now be active");
     assert_eq!(
         action2_id,
@@ -322,7 +318,10 @@ fn test_complete_utility_ai_lifecycle() {
     world.flush();
 
     // Verify action was initiated
-    assert!(world.get::<DrinkAction>(actor).is_some(), "DrinkAction should be active");
+    assert!(
+        world.get::<DrinkAction>(actor).is_some(),
+        "DrinkAction should be active"
+    );
     assert_eq!(drink_action, world.get::<CurrentAction>(actor).unwrap().0);
 }
 
@@ -339,11 +338,9 @@ fn test_on_score_event_contains_entity() {
     app.insert_resource(ScoredEntities::default());
 
     // Add an observer to capture OnScore events
-    app.add_observer(
-        |trigger: On<OnScore>, mut scored: ResMut<ScoredEntities>| {
-            scored.0.push(trigger.event().entity);
-        },
-    );
+    app.add_observer(|trigger: On<OnScore>, mut scored: ResMut<ScoredEntities>| {
+        scored.0.push(trigger.event().entity);
+    });
 
     let world = app.world_mut();
 
@@ -375,11 +372,9 @@ fn test_on_picked_event_contains_entity_and_action() {
     app.insert_resource(PickedActions::default());
 
     // Add an observer to capture OnPicked events
-    app.add_observer(
-        |trigger: On<OnPicked>, mut picked: ResMut<PickedActions>| {
-            picked.0.push((trigger.event().entity, trigger.event().action));
-        },
-    );
+    app.add_observer(|trigger: On<OnPicked>, mut picked: ResMut<PickedActions>| {
+        picked.0.push((trigger.event().entity, trigger.event().action));
+    });
 
     let world = app.world_mut();
 
@@ -389,10 +384,7 @@ fn test_on_picked_event_contains_entity_and_action() {
     let mut commands = world.commands();
     let scorer = commands.spawn((Score::new(0.8), MyMarker)).id();
     let actor = commands
-        .spawn((
-            Picker::new(idle_action).with(scorer, my_action),
-            FirstToScore::new(0.5),
-        ))
+        .spawn((Picker::new(idle_action).with(scorer, my_action), FirstToScore::new(0.5)))
         .add_child(scorer)
         .id();
     world.flush();
@@ -432,7 +424,9 @@ fn test_on_action_initiated_event() {
     let idle_action = world.register_component::<IdleAction>();
 
     let mut commands = world.commands();
-    let actor = commands.spawn((Picker::new(idle_action), CurrentAction(idle_action))).id();
+    let actor = commands
+        .spawn((Picker::new(idle_action), CurrentAction(idle_action)))
+        .id();
     world.flush();
 
     // Request an action
@@ -458,13 +452,11 @@ fn test_on_action_ended_event() {
     app.insert_resource(EndedActions::default());
 
     // Add an observer to capture OnActionEnded events
-    app.add_observer(
-        |trigger: On<OnActionEnded>, mut ended: ResMut<EndedActions>| {
-            ended
-                .0
-                .push((trigger.event().entity, trigger.event().action, trigger.event().reason));
-        },
-    );
+    app.add_observer(|trigger: On<OnActionEnded>, mut ended: ResMut<EndedActions>| {
+        ended
+            .0
+            .push((trigger.event().entity, trigger.event().action, trigger.event().reason));
+    });
 
     app.add_observer(on_action_initiated_insert_default::<TestAction>);
     app.add_observer(on_action_ended_remove::<TestAction>);
@@ -475,7 +467,9 @@ fn test_on_action_ended_event() {
     let idle_action = world.register_component::<IdleAction>();
 
     let mut commands = world.commands();
-    let actor = commands.spawn((Picker::new(idle_action), CurrentAction(idle_action))).id();
+    let actor = commands
+        .spawn((Picker::new(idle_action), CurrentAction(idle_action)))
+        .id();
     world.flush();
 
     // Start an action
@@ -519,13 +513,11 @@ fn test_on_action_cancelled_event() {
 
     app.insert_resource(EndedActions::default());
 
-    app.add_observer(
-        |trigger: On<OnActionEnded>, mut ended: ResMut<EndedActions>| {
-            ended
-                .0
-                .push((trigger.event().entity, trigger.event().action, trigger.event().reason));
-        },
-    );
+    app.add_observer(|trigger: On<OnActionEnded>, mut ended: ResMut<EndedActions>| {
+        ended
+            .0
+            .push((trigger.event().entity, trigger.event().action, trigger.event().reason));
+    });
 
     app.add_observer(on_action_initiated_insert_default::<Action1>);
     app.add_observer(on_action_initiated_insert_default::<Action2>);
@@ -539,7 +531,9 @@ fn test_on_action_cancelled_event() {
     let idle_action = world.register_component::<IdleAction>();
 
     let mut commands = world.commands();
-    let actor = commands.spawn((Picker::new(idle_action), CurrentAction(idle_action))).id();
+    let actor = commands
+        .spawn((Picker::new(idle_action), CurrentAction(idle_action)))
+        .id();
     world.flush();
 
     // Start action1
@@ -553,7 +547,10 @@ fn test_on_action_cancelled_event() {
     // Verify action1 was cancelled
     let ended = world.resource::<EndedActions>();
     assert!(
-        ended.0.iter().any(|(e, a, r)| *e == actor && *a == action1 && *r == ActionEndReason::Cancelled),
+        ended
+            .0
+            .iter()
+            .any(|(e, a, r)| *e == actor && *a == action1 && *r == ActionEndReason::Cancelled),
         "Action1 should have been cancelled"
     );
 }
@@ -578,17 +575,15 @@ fn test_realtime_lifecycle() {
             }
         },
     );
-    app.add_observer(
-        |trigger: On<OnActionEnded>, mut commands: Commands, world: &World| {
-            let actor = trigger.event().entity;
-            let action = trigger.event().action;
-            if let Some(drink_action_id) = world.component_id::<DrinkAction>() {
-                if action == drink_action_id {
-                    commands.entity(actor).remove::<DrinkAction>();
-                }
+    app.add_observer(|trigger: On<OnActionEnded>, mut commands: Commands, world: &World| {
+        let actor = trigger.event().entity;
+        let action = trigger.event().action;
+        if let Some(drink_action_id) = world.component_id::<DrinkAction>() {
+            if action == drink_action_id {
+                commands.entity(actor).remove::<DrinkAction>();
             }
-        },
-    );
+        }
+    });
 
     let world = app.world_mut();
 
@@ -596,7 +591,9 @@ fn test_realtime_lifecycle() {
     let idle_action = world.register_component::<IdleAction>();
 
     let mut commands = world.commands();
-    let thirst_scorer = commands.spawn((Score::default(), FixedScore::new(0.9), ThirstMarker)).id();
+    let thirst_scorer = commands
+        .spawn((Score::default(), FixedScore::new(0.9), ThirstMarker))
+        .id();
     let actor = commands
         .spawn((
             Picker::new(idle_action).with(thirst_scorer, drink_action),
@@ -634,7 +631,10 @@ fn test_realtime_lifecycle() {
         drink_action, current_action,
         "Actor should have switched to drinking action"
     );
-    assert!(world.get::<DrinkAction>(actor).is_some(), "DrinkAction should be active");
+    assert!(
+        world.get::<DrinkAction>(actor).is_some(),
+        "DrinkAction should be active"
+    );
 }
 
 /// Test multiple actors with different scores and actions

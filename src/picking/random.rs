@@ -6,7 +6,7 @@ use bevy::{
     },
     prelude::*,
 };
-use rand::{seq::IteratorRandom, RngCore};
+use rand::{Rng, seq::IteratorRandom};
 
 use crate::{
     ecs::DeferredWorldExt,
@@ -61,22 +61,22 @@ use crate::{
 /// ```
 pub struct PickRandom {
     /// The random number generator to use.
-    pub rng: Box<dyn RngCore + Send + Sync + 'static>,
+    pub rng: Box<dyn Rng + Send + Sync + 'static>,
 }
 
 impl PickRandom {
     /// Creates a new [`Random`] with the given random number generator.
-    pub fn new(rng: impl RngCore + Send + Sync + 'static) -> Self {
+    pub fn new(rng: impl Rng + Send + Sync + 'static) -> Self {
         Self { rng: Box::new(rng) }
     }
 
     /// Returns a reference to the random number generator.
-    pub fn rng(&mut self) -> &mut (impl RngCore + Send + Sync + 'static) {
+    pub fn rng(&mut self) -> &mut (impl Rng + Send + Sync + 'static) {
         &mut self.rng
     }
 
     /// Sets the random number generator.
-    pub fn set_rng(&mut self, rng: impl RngCore + Send + Sync + 'static) {
+    pub fn set_rng(&mut self, rng: impl Rng + Send + Sync + 'static) {
         self.rng = Box::new(rng);
     }
 
@@ -99,7 +99,7 @@ impl PickRandom {
     }
 }
 
-impl<R: RngCore + Send + Sync + 'static> From<R> for PickRandom {
+impl<R: Rng + Send + Sync + 'static> From<R> for PickRandom {
     fn from(rng: R) -> Self {
         Self::new(rng)
     }

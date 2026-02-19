@@ -74,7 +74,7 @@ impl Plugin for ScoringPlugin {
             .register_type::<Sum>()
             .register_type::<Winning>();
 
-        // Note: RandomScore cannot be reflected due to the boxed RngCore trait object
+        // Note: RandomScore cannot be reflected due to the boxed Rng trait object
 
         app.register_type::<RunScoring>().register_type::<OnScore>();
     }
@@ -418,7 +418,7 @@ mod tests {
             world.get::<Score>(parent).unwrap().get(),
             "Parent score should be 1.0."
         );
-            }
+    }
 
     #[test]
     fn evaluated_power() {
@@ -453,7 +453,7 @@ mod tests {
         world.flush();
 
         assert_eq!(0.5, world.get::<Score>(entity).unwrap().get(), "Score should be 0.5.");
-            }
+    }
 
     #[test]
     fn measured_weighted_sum() {
@@ -474,7 +474,7 @@ mod tests {
         world.flush();
 
         assert_relative_eq!(0.89, world.get::<Score>(parent).unwrap().get());
-            }
+    }
 
     #[test]
     fn measured_weighted_product() {
@@ -495,7 +495,7 @@ mod tests {
         world.flush();
 
         assert_relative_eq!(0.0648, world.get::<Score>(parent).unwrap().get());
-            }
+    }
 
     #[test]
     fn measured_weighted_max() {
@@ -516,7 +516,7 @@ mod tests {
         world.flush();
 
         assert_relative_eq!(0.81, world.get::<Score>(parent).unwrap().get());
-            }
+    }
 
     #[test]
     fn measured_weighted_rms() {
@@ -537,7 +537,7 @@ mod tests {
         world.flush();
 
         assert_relative_eq!(0.8905055, world.get::<Score>(parent).unwrap().get());
-            }
+    }
 
     #[test]
     fn product() {
@@ -558,7 +558,7 @@ mod tests {
         world.flush();
 
         assert_relative_eq!(0.72, world.get::<Score>(parent).unwrap().get(),);
-            }
+    }
 
     #[test]
     fn sum() {
@@ -583,7 +583,7 @@ mod tests {
             world.get::<Score>(parent).unwrap().get(),
             "Parent score should be 1.0."
         );
-            }
+    }
 
     #[test]
     fn winning() {
@@ -608,5 +608,5 @@ mod tests {
             world.get::<Score>(parent).unwrap().get(),
             "Parent score should be 0.9."
         );
-            }
+    }
 }
