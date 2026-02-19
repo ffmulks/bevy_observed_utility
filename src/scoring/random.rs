@@ -8,7 +8,7 @@ use bevy::{
     },
     prelude::*,
 };
-use rand::{Rng as _, RngCore};
+use rand::Rng;
 
 use crate::{
     ecs::DeferredWorldExt,
@@ -38,7 +38,7 @@ use crate::{
 /// ```
 pub struct RandomScore {
     /// The random number generator to use.
-    pub rng: Box<dyn RngCore + Send + Sync + 'static>,
+    pub rng: Box<dyn Rng + Send + Sync + 'static>,
     /// The range of scores to generate.
     pub range: ScoreRange,
 }
@@ -46,7 +46,7 @@ pub struct RandomScore {
 impl RandomScore {
     /// Creates a new [`RandomScore`] with the given random number generator.
     #[must_use]
-    pub fn new(rng: impl RngCore + Send + Sync + 'static) -> Self {
+    pub fn new(rng: impl Rng + Send + Sync + 'static) -> Self {
         Self {
             rng: Box::new(rng),
             range: ScoreRange::FULL,
@@ -55,7 +55,7 @@ impl RandomScore {
 
     /// Creates a new [`RandomScore`] with the given random number generator and score range.
     #[must_use]
-    pub fn with_range(rng: impl RngCore + Send + Sync + 'static, range: impl RangeBounds<Score>) -> Self {
+    pub fn with_range(rng: impl Rng + Send + Sync + 'static, range: impl RangeBounds<Score>) -> Self {
         Self {
             rng: Box::new(rng),
             range: ScoreRange::from_bounds(range),
@@ -64,12 +64,12 @@ impl RandomScore {
 
     /// Returns a mutable reference to the random number generator.
     #[must_use]
-    pub fn rng_mut(&mut self) -> &mut (impl RngCore + Send + Sync + 'static) {
+    pub fn rng_mut(&mut self) -> &mut (impl Rng + Send + Sync + 'static) {
         &mut self.rng
     }
 
     /// Sets the random number generator.
-    pub fn set_rng(&mut self, rng: impl RngCore + Send + Sync + 'static) {
+    pub fn set_rng(&mut self, rng: impl Rng + Send + Sync + 'static) {
         self.rng = Box::new(rng);
     }
 
@@ -97,9 +97,7 @@ impl Component for RandomScore {
             #[derive(Resource, Default)]
             struct RandomScoreObserverSpawned;
 
-            world
-                .once::<RandomScoreObserverSpawned>()
-                .observe(Self::observer);
+            world.once::<RandomScoreObserverSpawned>().observe(Self::observer);
         })
     }
 }

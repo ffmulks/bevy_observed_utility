@@ -235,7 +235,10 @@ pub mod prelude {
             on_action_initiated_insert_from_resource,
         },
         ecs::AncestorQuery,
-        event::{ActionEndReason, OnActionEnded, OnActionInitiated, OnPick, OnPicked, OnScore, RequestAction, RunPicking, RunScoring},
+        event::{
+            ActionEndReason, OnActionEnded, OnActionInitiated, OnPick, OnPicked, OnScore, RequestAction, RunPicking,
+            RunScoring,
+        },
         picking::{FirstToScore, Highest, Picker},
         scoring::{
             AllOrNothing, Evaluated, Evaluator, FixedScore, LinearEvaluator, Measure, Measured, PowerEvaluator,

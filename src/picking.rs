@@ -37,7 +37,7 @@ impl Plugin for PickingPlugin {
             .register_type::<FirstToScore>()
             .register_type::<Highest>();
 
-        // Note: PickRandom cannot be reflected due to the boxed RngCore trait object
+        // Note: PickRandom cannot be reflected due to the boxed Rng trait object
 
         app.register_type::<RunPicking>()
             .register_type::<OnPick>()
