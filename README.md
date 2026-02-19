@@ -4,12 +4,6 @@ A state-of-the-art utility AI library for Bevy, built using ECS [observers](http
 
 See the [documentation](https://docs.rs/bevy_observed_utility/latest/bevy_observed_utility) for a complete walkthrough example of using the library.
 
-## Get Started
-
-```toml
-[dependencies]
-bevy_observed_utility = "0.4.0"
-```
 ## Bevy Compatibility
 
 | bevy | bevy_observed_utility |
